@@ -2,36 +2,38 @@ class DiningTableModel {
   final int id;
   final String tableName;
   final String section;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String status;
+  final int? sequence;
 
   const DiningTableModel({
     required this.id,
     required this.tableName,
     required this.section,
-    required this.createdAt,
-    required this.updatedAt,
+    this.status = 'Available',
+    this.sequence,
   });
 
   factory DiningTableModel.fromJson(Map<String, dynamic> json) {
     return DiningTableModel(
-      id: json['id'] as int,
-      tableName: json['table_name'] as String,
-      section: json['description'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      id: json['tableId'] as int,
+      tableName: json['tableName'] as String,
+      section: json['section'] as String,
+      status: json['status'] as String? ?? 'Available',
+      sequence: json['sequence'] as int?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'table_name': tableName,
-      'description': section,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'tableId': id,
+      'tableName': tableName,
+      'section': section,
+      'status': status,
+      'sequence': sequence,
     };
   }
+
+  bool get isAvailable => status.toLowerCase() == 'available';
 }
 
 class TableSection {

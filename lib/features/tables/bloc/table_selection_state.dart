@@ -9,6 +9,11 @@ class TableSelectionState extends Equatable {
   final String? selectedSection;
   final DiningTableModel? selectedTable;
   final String? errorMessage;
+  final List<int> favoriteTableIds;
+  final List<DiningTableModel> favoriteTables;
+
+  // Special section name for favorites
+  static const String favoritesSection = 'Favorites';
 
   const TableSelectionState({
     this.status = TableSelectionStatus.initial,
@@ -16,6 +21,8 @@ class TableSelectionState extends Equatable {
     this.selectedSection,
     this.selectedTable,
     this.errorMessage,
+    this.favoriteTableIds = const [],
+    this.favoriteTables = const [],
   });
 
   TableSelectionState copyWith({
@@ -25,6 +32,8 @@ class TableSelectionState extends Equatable {
     DiningTableModel? selectedTable,
     String? errorMessage,
     bool clearSelectedSection = false,
+    List<int>? favoriteTableIds,
+    List<DiningTableModel>? favoriteTables,
   }) {
     return TableSelectionState(
       status: status ?? this.status,
@@ -32,11 +41,19 @@ class TableSelectionState extends Equatable {
       selectedSection: clearSelectedSection ? null : (selectedSection ?? this.selectedSection),
       selectedTable: selectedTable ?? this.selectedTable,
       errorMessage: errorMessage,
+      favoriteTableIds: favoriteTableIds ?? this.favoriteTableIds,
+      favoriteTables: favoriteTables ?? this.favoriteTables,
     );
   }
 
   List<DiningTableModel> get currentSectionTables {
-    if (selectedSection == null) return [];
+    if (selectedSection == null) {
+      // Show favorites when no section selected
+      return favoriteTables;
+    }
+    if (selectedSection == favoritesSection) {
+      return favoriteTables;
+    }
     final section = sections.firstWhere(
       (s) => s.name == selectedSection,
       orElse: () => const TableSection(name: '', tables: []),
@@ -44,6 +61,18 @@ class TableSelectionState extends Equatable {
     return section.tables;
   }
 
+  bool isFavorite(int tableId) {
+    return favoriteTableIds.contains(tableId);
+  }
+
   @override
-  List<Object?> get props => [status, sections, selectedSection, selectedTable, errorMessage];
+  List<Object?> get props => [
+        status,
+        sections,
+        selectedSection,
+        selectedTable,
+        errorMessage,
+        favoriteTableIds,
+        favoriteTables,
+      ];
 }

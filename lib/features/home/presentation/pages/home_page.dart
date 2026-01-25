@@ -108,11 +108,24 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Welcome back, ${widget.user.displayName}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.8),
+                Text.rich(
+                  TextSpan(
+                    text: 'Welcome back, ',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                    children: [
+                      TextSpan(
+                        text: widget.user.displayName,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontFamily: 'Kiran',
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -223,8 +236,9 @@ class _HomePageState extends State<HomePage> {
             child: Text(
               widget.user.initials,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
+                fontFamily: 'Kiran',
                 color: Colors.white,
               ),
             ),

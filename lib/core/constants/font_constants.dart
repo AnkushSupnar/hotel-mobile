@@ -12,12 +12,14 @@ class AppFonts {
     double fontSize = 18,
     FontWeight fontWeight = FontWeight.normal,
     Color? color,
+    TextDecoration? decoration,
   }) {
     return TextStyle(
       fontFamily: kiran,
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
+      decoration: decoration,
     );
   }
 

@@ -1,6 +1,7 @@
 class MenuItemModel {
   final int id;
   final int categoryId;
+  final String categoryName;
   final String itemCode;
   final String itemName;
   final double rate;
@@ -8,6 +9,7 @@ class MenuItemModel {
   const MenuItemModel({
     required this.id,
     required this.categoryId,
+    this.categoryName = '',
     required this.itemCode,
     required this.itemName,
     required this.rate,
@@ -16,11 +18,23 @@ class MenuItemModel {
   factory MenuItemModel.fromJson(Map<String, dynamic> json) {
     return MenuItemModel(
       id: json['id'] as int,
-      categoryId: json['catid'] as int,
-      itemCode: json['item_code']?.toString() ?? '',
-      itemName: json['item_name'] as String,
+      categoryId: json['categoryId'] as int,
+      categoryName: json['categoryName'] as String? ?? '',
+      itemCode: json['itemCode']?.toString() ?? '',
+      itemName: json['itemName'] as String,
       rate: (json['rate'] as num).toDouble(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'categoryId': categoryId,
+      'categoryName': categoryName,
+      'itemCode': itemCode,
+      'itemName': itemName,
+      'rate': rate,
+    };
   }
 }
 

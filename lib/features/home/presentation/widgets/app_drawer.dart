@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hotel/features/auth/data/models/user_model.dart';
+import 'package:hotel/features/settings/presentation/pages/favorite_items_page.dart';
+import 'package:hotel/features/settings/presentation/pages/favorite_tables_page.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends StatefulWidget {
   final UserModel user;
   final int selectedIndex;
   final Function(int) onItemSelected;
@@ -14,6 +16,13 @@ class AppDrawer extends StatelessWidget {
     required this.onItemSelected,
     required this.onLogout,
   });
+
+  @override
+  State<AppDrawer> createState() => _AppDrawerState();
+}
+
+class _AppDrawerState extends State<AppDrawer> {
+  bool _isSettingsExpanded = false;
 
   // Modern Material Color Palette
   static const Color primaryGradientStart = Color(0xFF667eea);
@@ -46,7 +55,7 @@ class AppDrawer extends StatelessWidget {
 
   Widget _buildDrawerHeader(BuildContext context) {
     final avatarColor = Color(
-      int.parse(user.avatarColor.replaceFirst('#', '0xFF')),
+      int.parse(widget.user.avatarColor.replaceFirst('#', '0xFF')),
     );
 
     return Container(
@@ -125,10 +134,11 @@ class AppDrawer extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        user.initials,
+                        widget.user.initials,
                         style: const TextStyle(
-                          fontSize: 24,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
+                          fontFamily: 'Kiran',
                           color: Colors.white,
                         ),
                       ),
@@ -142,10 +152,11 @@ class AppDrawer extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      user.displayName,
+                      widget.user.displayName,
                       style: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
+                        fontFamily: 'Kiran',
                         color: Colors.white,
                       ),
                     ),
@@ -160,7 +171,7 @@ class AppDrawer extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        user.role,
+                        widget.user.role,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -215,28 +226,123 @@ class AppDrawer extends StatelessWidget {
         title: 'Reports',
         color: const Color(0xFF00B5D8),
       ),
-      _MenuItem(
-        icon: Icons.settings_rounded,
-        title: 'Settings',
-        color: const Color(0xFF718096),
-      ),
     ];
 
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      itemCount: menuItems.length,
-      itemBuilder: (context, index) {
-        final item = menuItems[index];
-        final isSelected = selectedIndex == index;
+      children: [
+        // Regular menu items (not Settings)
+        ...menuItems.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          final isSelected = widget.selectedIndex == index;
 
-        return Padding(
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  widget.onItemSelected(index);
+                  Navigator.of(context).pop();
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: isSelected
+                        ? LinearGradient(
+                            colors: [
+                              item.color.withValues(alpha: 0.15),
+                              item.color.withValues(alpha: 0.05),
+                            ],
+                          )
+                        : null,
+                    borderRadius: BorderRadius.circular(16),
+                    border: isSelected
+                        ? Border.all(
+                            color: item.color.withValues(alpha: 0.3),
+                            width: 1.5,
+                          )
+                        : null,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: isSelected
+                                ? [item.color, item.color.withValues(alpha: 0.8)]
+                                : [
+                                    item.color.withValues(alpha: 0.15),
+                                    item.color.withValues(alpha: 0.1),
+                                  ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          item.icon,
+                          color: isSelected ? Colors.white : item.color,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? item.color : textDark,
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: item.color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+
+        // Settings with expandable submenu
+        _buildSettingsMenu(context),
+      ],
+    );
+  }
+
+  Widget _buildSettingsMenu(BuildContext context) {
+    const settingsColor = Color(0xFF718096);
+    final isSelected = widget.selectedIndex == 7;
+
+    return Column(
+      children: [
+        Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                onItemSelected(index);
-                Navigator.of(context).pop();
+                setState(() {
+                  _isSettingsExpanded = !_isSettingsExpanded;
+                });
               },
               borderRadius: BorderRadius.circular(16),
               child: AnimatedContainer(
@@ -246,18 +352,18 @@ class AppDrawer extends StatelessWidget {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  gradient: isSelected
+                  gradient: isSelected || _isSettingsExpanded
                       ? LinearGradient(
                           colors: [
-                            item.color.withValues(alpha: 0.15),
-                            item.color.withValues(alpha: 0.05),
+                            settingsColor.withValues(alpha: 0.15),
+                            settingsColor.withValues(alpha: 0.05),
                           ],
                         )
                       : null,
                   borderRadius: BorderRadius.circular(16),
-                  border: isSelected
+                  border: isSelected || _isSettingsExpanded
                       ? Border.all(
-                          color: item.color.withValues(alpha: 0.3),
+                          color: settingsColor.withValues(alpha: 0.3),
                           width: 1.5,
                         )
                       : null,
@@ -270,49 +376,166 @@ class AppDrawer extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: isSelected
-                              ? [item.color, item.color.withValues(alpha: 0.8)]
+                          colors: isSelected || _isSettingsExpanded
+                              ? [settingsColor, settingsColor.withValues(alpha: 0.8)]
                               : [
-                                  item.color.withValues(alpha: 0.15),
-                                  item.color.withValues(alpha: 0.1),
+                                  settingsColor.withValues(alpha: 0.15),
+                                  settingsColor.withValues(alpha: 0.1),
                                 ],
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        item.icon,
-                        color: isSelected ? Colors.white : item.color,
+                        Icons.settings_rounded,
+                        color: isSelected || _isSettingsExpanded
+                            ? Colors.white
+                            : settingsColor,
                         size: 22,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
-                        item.title,
+                        'Settings',
                         style: TextStyle(
                           fontSize: 15,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? item.color : textDark,
+                          fontWeight: isSelected || _isSettingsExpanded
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          color: isSelected || _isSettingsExpanded
+                              ? settingsColor
+                              : textDark,
                         ),
                       ),
                     ),
-                    if (isSelected)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: item.color,
-                          shape: BoxShape.circle,
-                        ),
+                    AnimatedRotation(
+                      turns: _isSettingsExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: settingsColor,
+                        size: 24,
                       ),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
-        );
-      },
+        ),
+
+        // Submenu items
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(left: 24),
+            child: Column(
+              children: [
+                _buildSubMenuItem(
+                  context,
+                  icon: Icons.star_rounded,
+                  title: 'Favorite Tables',
+                  color: const Color(0xFFED8936),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const FavoriteTablesPage(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 4),
+                _buildSubMenuItem(
+                  context,
+                  icon: Icons.restaurant_menu_rounded,
+                  title: 'Favorite Items',
+                  color: const Color(0xFF805AD5),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const FavoriteItemsPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          crossFadeState: _isSettingsExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 200),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubMenuItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: color.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color, color.withValues(alpha: 0.8)],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: textDark,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: color,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -333,7 +556,7 @@ class AppDrawer extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: onLogout,
+            onTap: widget.onLogout,
             borderRadius: BorderRadius.circular(16),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14),

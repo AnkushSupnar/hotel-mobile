@@ -32,3 +32,16 @@ class LoginSubmitted extends LoginEvent {
 class LoginReset extends LoginEvent {
   const LoginReset();
 }
+
+class LoadUsernames extends LoginEvent {
+  const LoadUsernames();
+}
+
+class ServerUrlChanged extends LoginEvent {
+  final String serverUrl;
+
+  const ServerUrlChanged(this.serverUrl);
+
+  @override
+  List<Object?> get props => [serverUrl];
+}

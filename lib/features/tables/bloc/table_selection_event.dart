@@ -28,3 +28,20 @@ class SelectTable extends TableSelectionEvent {
   @override
   List<Object?> get props => [tableId];
 }
+
+class RefreshTables extends TableSelectionEvent {
+  const RefreshTables();
+}
+
+class ToggleFavorite extends TableSelectionEvent {
+  final int tableId;
+
+  const ToggleFavorite(this.tableId);
+
+  @override
+  List<Object?> get props => [tableId];
+}
+
+class LoadFavorites extends TableSelectionEvent {
+  const LoadFavorites();
+}

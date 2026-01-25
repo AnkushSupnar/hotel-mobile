@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hotel/core/constants/app_constants.dart';
+import 'package:hotel/core/services/api_config_service.dart';
 import 'package:hotel/features/auth/bloc/login_bloc.dart';
 import 'package:hotel/features/auth/bloc/login_event.dart';
 import 'package:hotel/features/auth/bloc/login_state.dart';
@@ -13,7 +13,7 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => LoginBloc(),
+      create: (_) => LoginBloc()..add(const LoadUsernames()),
       child: const LoginView(),
     );
   }
@@ -72,11 +72,10 @@ class _LoginViewState extends State<LoginView> {
                 ),
               );
           }
-          if (state.status == LoginStatus.success) {
-            final user = UserModel.fromUsername(state.username);
+          if (state.status == LoginStatus.success && state.user != null) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => HomePage(user: user),
+                builder: (_) => HomePage(user: state.user!),
               ),
             );
           }
@@ -129,6 +128,19 @@ class _LoginViewState extends State<LoginView> {
   Widget _buildHeader() {
     return Column(
       children: [
+        // Settings Icon at top right
+        Align(
+          alignment: Alignment.topRight,
+          child: IconButton(
+            onPressed: () => _showServerUrlDialog(context),
+            icon: Icon(
+              Icons.settings_rounded,
+              color: Colors.white.withValues(alpha: 0.8),
+              size: 28,
+            ),
+            tooltip: 'Server Settings',
+          ),
+        ),
         // Animated Icon Container
         Container(
           width: 100,
@@ -205,20 +217,91 @@ class _LoginViewState extends State<LoginView> {
 
   Widget _buildUsernameDropdown() {
     return BlocBuilder<LoginBloc, LoginState>(
-      buildWhen: (previous, current) => previous.username != current.username,
+      buildWhen: (previous, current) =>
+          previous.username != current.username ||
+          previous.usernamesStatus != current.usernamesStatus ||
+          previous.usernames != current.usernames,
       builder: (context, state) {
+        final isLoading = state.usernamesStatus == UsernamesStatus.loading;
+        final hasError = state.usernamesStatus == UsernamesStatus.error;
+        final usernames = state.usernames;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Username',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: textDark,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Username',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: textDark,
+                  ),
+                ),
+                if (isLoading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(primaryGradientStart),
+                    ),
+                  ),
+                if (hasError)
+                  GestureDetector(
+                    onTap: () {
+                      context.read<LoginBloc>().add(const LoadUsernames());
+                    },
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.refresh_rounded,
+                          size: 16,
+                          color: errorColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Retry',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: errorColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
+            if (hasError)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: errorColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: errorColor.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: errorColor, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        state.usernamesError ?? 'Failed to load usernames',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: errorColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Container(
               decoration: BoxDecoration(
                 color: inputBackground,
@@ -231,7 +314,7 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               child: DropdownButtonFormField<String>(
-                initialValue: state.username.isEmpty ? null : state.username,
+                value: state.username.isEmpty ? null : state.username,
                 decoration: InputDecoration(
                   prefixIcon: ShaderMask(
                     shaderCallback: (bounds) => const LinearGradient(
@@ -248,11 +331,25 @@ class _LoginViewState extends State<LoginView> {
                     vertical: 16,
                   ),
                 ),
-                hint: Text(
-                  'Select your role',
-                  style: TextStyle(color: textMuted.withValues(alpha: 0.7)),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  color: textDark,
+                  fontFamily: 'Kiran',
                 ),
-                items: AppConstants.availableUsers.map((user) {
+                hint: Text(
+                  isLoading
+                      ? 'Loading users...'
+                      : usernames.isEmpty
+                          ? 'No users available'
+                          : 'yaujar inavaDa',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: textMuted.withValues(alpha: 0.7),
+                    fontFamily: 'Kiran',
+                  ),
+                ),
+                items: usernames.map((user) {
                   return DropdownMenuItem<String>(
                     value: user,
                     child: Row(
@@ -276,22 +373,27 @@ class _LoginViewState extends State<LoginView> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          user.substring(0, 1).toUpperCase() + user.substring(1),
+                          user,
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 20,
                             fontWeight: FontWeight.w500,
                             color: textDark,
+                            fontFamily: 'Kiran',
                           ),
                         ),
                       ],
                     ),
                   );
                 }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    context.read<LoginBloc>().add(LoginUsernameChanged(value));
-                  }
-                },
+                onChanged: isLoading || usernames.isEmpty
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          context
+                              .read<LoginBloc>()
+                              .add(LoginUsernameChanged(value));
+                        }
+                      },
                 dropdownColor: Colors.white,
                 isExpanded: true,
                 icon: const Icon(Icons.keyboard_arrow_down_rounded),
@@ -521,5 +623,192 @@ class _LoginViewState extends State<LoginView> {
       default:
         return primaryGradientStart;
     }
+  }
+
+  void _showServerUrlDialog(BuildContext context) {
+    final serverUrlController = TextEditingController(
+      text: ApiConfigService.serverUrl,
+    );
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [primaryGradientStart, primaryGradientEnd],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.dns_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Server Settings',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: textDark,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Server URL',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: inputBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: primaryGradientStart.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: TextField(
+                  controller: serverUrlController,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: textDark,
+                  ),
+                  decoration: InputDecoration(
+                    prefixIcon: ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [primaryGradientStart, primaryGradientEnd],
+                      ).createShader(bounds),
+                      child: const Icon(
+                        Icons.link_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                    hintText: 'http://localhost:8081',
+                    hintStyle:
+                        TextStyle(color: textMuted.withValues(alpha: 0.7)),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: Colors.blue.shade700,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Enter the base URL of your API server without trailing slash',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [primaryGradientStart, primaryGradientEnd],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TextButton(
+                onPressed: () {
+                  final newUrl = serverUrlController.text.trim();
+                  if (newUrl.isNotEmpty) {
+                    context
+                        .read<LoginBloc>()
+                        .add(ServerUrlChanged(newUrl));
+                    Navigator.of(dialogContext).pop();
+                    ScaffoldMessenger.of(context)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.check_circle,
+                                  color: Colors.white),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text('Server URL updated'),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFF38A169),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin: const EdgeInsets.all(16),
+                        ),
+                      );
+                  }
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                ),
+                child: const Text(
+                  'Save',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

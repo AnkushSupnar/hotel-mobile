@@ -19,4 +19,13 @@ class CategoryModel {
       isPurchasable: json['purchase'] == 'Y',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'category': name,
+      'stock': hasStock ? 'Y' : 'N',
+      'purchase': isPurchasable ? 'Y' : 'N',
+    };
+  }
 }
