@@ -45,3 +45,17 @@ class ToggleFavorite extends TableSelectionEvent {
 class LoadFavorites extends TableSelectionEvent {
   const LoadFavorites();
 }
+
+class CloseTable extends TableSelectionEvent {
+  final int tableId;
+  final String tableName;
+
+  const CloseTable(this.tableId, this.tableName);
+
+  @override
+  List<Object?> get props => [tableId, tableName];
+}
+
+class ClearClosedTablePdf extends TableSelectionEvent {
+  const ClearClosedTablePdf();
+}

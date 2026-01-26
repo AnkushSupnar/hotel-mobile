@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:equatable/equatable.dart';
 import 'package:hotel/features/tables/data/models/dining_table_model.dart';
 
@@ -11,6 +13,12 @@ class TableSelectionState extends Equatable {
   final String? errorMessage;
   final List<int> favoriteTableIds;
   final List<DiningTableModel> favoriteTables;
+  final int? closingTableId;
+  final Uint8List? closedTablePdfBytes;
+  final String? closedTableName;
+  final int? closedTableBillNo;
+  final double? closedTableNetAmount;
+  final int? closedTableId;
 
   // Special section name for favorites
   static const String favoritesSection = 'Favorites';
@@ -23,7 +31,15 @@ class TableSelectionState extends Equatable {
     this.errorMessage,
     this.favoriteTableIds = const [],
     this.favoriteTables = const [],
+    this.closingTableId,
+    this.closedTablePdfBytes,
+    this.closedTableName,
+    this.closedTableBillNo,
+    this.closedTableNetAmount,
+    this.closedTableId,
   });
+
+  bool isClosingTable(int tableId) => closingTableId == tableId;
 
   TableSelectionState copyWith({
     TableSelectionStatus? status,
@@ -34,6 +50,14 @@ class TableSelectionState extends Equatable {
     bool clearSelectedSection = false,
     List<int>? favoriteTableIds,
     List<DiningTableModel>? favoriteTables,
+    int? closingTableId,
+    bool clearClosingTableId = false,
+    Uint8List? closedTablePdfBytes,
+    bool clearClosedTablePdf = false,
+    String? closedTableName,
+    int? closedTableBillNo,
+    double? closedTableNetAmount,
+    int? closedTableId,
   }) {
     return TableSelectionState(
       status: status ?? this.status,
@@ -43,6 +67,12 @@ class TableSelectionState extends Equatable {
       errorMessage: errorMessage,
       favoriteTableIds: favoriteTableIds ?? this.favoriteTableIds,
       favoriteTables: favoriteTables ?? this.favoriteTables,
+      closingTableId: clearClosingTableId ? null : (closingTableId ?? this.closingTableId),
+      closedTablePdfBytes: clearClosedTablePdf ? null : (closedTablePdfBytes ?? this.closedTablePdfBytes),
+      closedTableName: clearClosedTablePdf ? null : (closedTableName ?? this.closedTableName),
+      closedTableBillNo: clearClosedTablePdf ? null : (closedTableBillNo ?? this.closedTableBillNo),
+      closedTableNetAmount: clearClosedTablePdf ? null : (closedTableNetAmount ?? this.closedTableNetAmount),
+      closedTableId: clearClosedTablePdf ? null : (closedTableId ?? this.closedTableId),
     );
   }
 
@@ -74,5 +104,11 @@ class TableSelectionState extends Equatable {
         errorMessage,
         favoriteTableIds,
         favoriteTables,
+        closingTableId,
+        closedTablePdfBytes,
+        closedTableName,
+        closedTableBillNo,
+        closedTableNetAmount,
+        closedTableId,
       ];
 }

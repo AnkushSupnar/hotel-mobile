@@ -34,6 +34,8 @@ class DiningTableModel {
   }
 
   bool get isAvailable => status.toLowerCase() == 'available';
+  bool get isOngoing => status.toLowerCase() == 'ongoing';
+  bool get isClosed => status.toLowerCase() == 'close' || status.toLowerCase() == 'closed';
 }
 
 class TableSection {

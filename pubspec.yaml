@@ -45,6 +45,9 @@ dependencies:
   # HTTP client for API calls
   http: ^0.13.6
 
+  # PDF preview for bill display
+  printing: ^5.13.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

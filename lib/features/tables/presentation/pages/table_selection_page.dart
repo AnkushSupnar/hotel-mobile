@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hotel/core/constants/font_constants.dart';
+import 'package:hotel/core/services/bill_cache_service.dart';
 import 'package:hotel/core/services/waiter_storage_service.dart';
 import 'package:hotel/features/orders/presentation/pages/order_page.dart';
 import 'package:hotel/features/tables/bloc/table_selection_bloc.dart';
@@ -8,6 +11,7 @@ import 'package:hotel/features/tables/bloc/table_selection_event.dart';
 import 'package:hotel/features/tables/bloc/table_selection_state.dart';
 import 'package:hotel/features/tables/data/models/dining_table_model.dart';
 import 'package:hotel/features/tables/data/models/waiter_model.dart';
+import 'package:hotel/features/tables/presentation/pages/bill_preview_page.dart';
 
 class TableSelectionPage extends StatelessWidget {
   const TableSelectionPage({super.key});
@@ -50,11 +54,73 @@ class TableSelectionView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: surfaceColor,
-      body: Column(
-        children: [
-          _buildAppBar(context),
-          Expanded(
-            child: BlocBuilder<TableSelectionBloc, TableSelectionState>(
+      body: BlocListener<TableSelectionBloc, TableSelectionState>(
+        listenWhen: (previous, current) =>
+            (previous.closingTableId != null && current.closingTableId == null) ||
+            (previous.closedTablePdfBytes == null && current.closedTablePdfBytes != null),
+        listener: (context, state) {
+          // Show PDF bill preview if available
+          if (state.closedTablePdfBytes != null) {
+            final pdfBytes = state.closedTablePdfBytes!;
+            final tableName = state.closedTableName ?? '';
+            final billNo = state.closedTableBillNo ?? 0;
+            final netAmount = state.closedTableNetAmount ?? 0.0;
+            final tableId = state.closedTableId ?? 0;
+            // Clear the PDF from state before navigating
+            context.read<TableSelectionBloc>().add(const ClearClosedTablePdf());
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => BillPreviewPage(
+                  pdfBytes: pdfBytes,
+                  tableName: tableName,
+                  billNo: billNo,
+                  netAmount: netAmount,
+                  tableId: tableId,
+                ),
+              ),
+            );
+            return;
+          }
+
+          if (state.errorMessage != null && state.errorMessage!.contains('close table')) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(state.errorMessage!)),
+                  ],
+                ),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(16),
+              ),
+            );
+          } else if (state.closingTableId == null && state.closedTablePdfBytes == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 12),
+                    Text('Table closed successfully'),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF38A169),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(16),
+              ),
+            );
+          }
+        },
+        child: Column(
+          children: [
+            _buildAppBar(context),
+            Expanded(
+              child: BlocBuilder<TableSelectionBloc, TableSelectionState>(
               builder: (context, state) {
                 if (state.status == TableSelectionStatus.loading) {
                   return const Center(
@@ -105,6 +171,7 @@ class TableSelectionView extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -488,37 +555,64 @@ class TableSelectionView extends StatelessWidget {
   }) {
     final isFavorite = state.isFavorite(table.id);
     final isAvailable = table.isAvailable;
-    final isOngoing = !isAvailable;
-    // Green for both available and ongoing (ongoing shows green bg), red only for other statuses
-    final statusColor = const Color(0xFF38A169); // Always green for status badge
-    // Ongoing tables have green background
-    final cardColor = isOngoing
-        ? const Color(0xFF38A169).withValues(alpha: 0.15)
-        : Colors.white;
+    final isOngoing = table.isOngoing;
+    final isClosed = table.isClosed;
+    final isClosing = state.isClosingTable(table.id);
+
+    // Status color: green for ongoing, red for closed, section color for available
+    final Color statusColor;
+    final Color cardColor;
+    final Color borderColor;
+    final Color iconColor;
+    final Color nameColor;
+
+    if (isClosed) {
+      statusColor = Colors.red;
+      cardColor = Colors.red.withValues(alpha: 0.08);
+      borderColor = Colors.red.shade300;
+      iconColor = Colors.red.shade400;
+      nameColor = Colors.red.shade700;
+    } else if (isOngoing) {
+      statusColor = const Color(0xFF38A169);
+      cardColor = const Color(0xFF38A169).withValues(alpha: 0.15);
+      borderColor = const Color(0xFF38A169);
+      iconColor = const Color(0xFF38A169);
+      nameColor = const Color(0xFF2F855A);
+    } else {
+      statusColor = sectionColor;
+      cardColor = Colors.white;
+      borderColor = Colors.transparent;
+      iconColor = sectionColor;
+      nameColor = textDark;
+    }
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          if (isAvailable) {
+          if (isClosed) {
+            // Navigate to read-only order view for closed tables
+            _navigateToClosedTableOrder(context, table);
+          } else if (isAvailable) {
             _showTableSelectedDialog(context, table, sectionColor);
           } else {
             // Navigate to order page with existing orders
             _navigateToExistingOrder(context, table, sectionColor);
           }
         },
+        onLongPress: isOngoing ? () => _showCloseTableDialog(context, table) : null,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(20),
-            border: isOngoing
-                ? Border.all(color: const Color(0xFF38A169), width: 2)
+            border: (isOngoing || isClosed)
+                ? Border.all(color: borderColor, width: 2)
                 : null,
             boxShadow: [
               BoxShadow(
-                color: isOngoing
-                    ? const Color(0xFF38A169).withValues(alpha: 0.25)
+                color: (isOngoing || isClosed)
+                    ? borderColor.withValues(alpha: 0.25)
                     : sectionColor.withValues(alpha: 0.15),
                 blurRadius: 15,
                 offset: const Offset(0, 6),
@@ -538,6 +632,60 @@ class TableSelectionView extends StatelessWidget {
                     size: 18,
                   ),
                 ),
+              // Close button for ongoing tables
+              if (isOngoing)
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: isClosing
+                          ? null
+                          : () => _showCloseTableDialog(context, table),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: isClosing
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.red.shade400,
+                                ),
+                              )
+                            : Icon(
+                                Icons.lock_outline_rounded,
+                                color: Colors.red.shade400,
+                                size: 16,
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              // Closed lock icon
+              if (isClosed)
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.lock_rounded,
+                      color: Colors.red.shade400,
+                      size: 16,
+                    ),
+                  ),
+                ),
               // Table content
               Center(
                 child: Column(
@@ -549,10 +697,10 @@ class TableSelectionView extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: isOngoing
+                          colors: (isOngoing || isClosed)
                               ? [
-                                  const Color(0xFF38A169).withValues(alpha: 0.3),
-                                  const Color(0xFF38A169).withValues(alpha: 0.15),
+                                  iconColor.withValues(alpha: 0.3),
+                                  iconColor.withValues(alpha: 0.15),
                                 ]
                               : [
                                   sectionColor.withValues(alpha: 0.15),
@@ -563,7 +711,7 @@ class TableSelectionView extends StatelessWidget {
                       ),
                       child: Icon(
                         Icons.table_bar_rounded,
-                        color: isOngoing ? const Color(0xFF38A169) : sectionColor,
+                        color: iconColor,
                         size: 28,
                       ),
                     ),
@@ -573,7 +721,7 @@ class TableSelectionView extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isOngoing ? const Color(0xFF2F855A) : textDark,
+                        color: nameColor,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -613,6 +761,85 @@ class TableSelectionView extends StatelessWidget {
           table: table,
           loadExistingOrders: true,
         ),
+      ),
+    );
+  }
+
+  void _navigateToClosedTableOrder(
+    BuildContext context,
+    DiningTableModel table,
+  ) {
+    // Check if we have a cached bill for this closed table
+    final cachedBill = BillCacheService.getCachedBill(table.id);
+    if (cachedBill != null) {
+      final pdfBase64 = cachedBill['pdfBase64'] as String;
+      final pdfBytes = base64Decode(pdfBase64);
+      final tableName = cachedBill['tableName'] as String;
+      final billNo = cachedBill['billNo'] as int;
+      final netAmount = (cachedBill['netAmount'] as num).toDouble();
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BillPreviewPage(
+            pdfBytes: pdfBytes,
+            tableName: tableName,
+            billNo: billNo,
+            netAmount: netAmount,
+            tableId: table.id,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // No cached bill — show read-only order view
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => OrderPage(
+          table: table,
+          loadExistingOrders: true,
+          isTableClosed: true,
+        ),
+      ),
+    );
+  }
+
+  void _showCloseTableDialog(
+    BuildContext context,
+    DiningTableModel table,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.lock_outline_rounded, color: Colors.red.shade400),
+            const SizedBox(width: 12),
+            const Text('Close Table?'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to close Table ${table.tableName}? This will finalize the bill and no further changes can be made.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text('Cancel', style: TextStyle(color: textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              context.read<TableSelectionBloc>().add(CloseTable(table.id, table.tableName));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Close Table', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hotel/features/auth/data/models/user_model.dart';
 import 'package:hotel/features/auth/presentation/pages/login_page.dart';
+import 'package:hotel/features/home/bloc/dashboard_bloc.dart';
+import 'package:hotel/features/home/bloc/dashboard_event.dart';
+import 'package:hotel/features/home/bloc/dashboard_state.dart';
+import 'package:hotel/features/home/data/models/dashboard_stats.dart';
 import 'package:hotel/features/home/presentation/widgets/app_drawer.dart';
 import 'package:hotel/features/tables/presentation/pages/table_selection_page.dart';
 
@@ -16,6 +21,21 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late final DashboardBloc _dashboardBloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboardBloc = DashboardBloc();
+    _dashboardBloc.add(const LoadDashboard());
+    _dashboardBloc.startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _dashboardBloc.close();
+    super.dispose();
+  }
 
   // Modern Material Color Palette
   static const Color primaryGradientStart = Color(0xFF667eea);
@@ -251,61 +271,90 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBody() {
     final currentPage = _pages[_selectedIndex];
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Quick Stats Cards
-          _buildQuickStats(),
-          const SizedBox(height: 24),
-          // Recent Activity Section
-          _buildSectionTitle('Recent Activity'),
-          const SizedBox(height: 16),
-          _buildRecentActivityList(),
-          const SizedBox(height: 24),
-          // Quick Actions
-          _buildSectionTitle('Quick Actions'),
-          const SizedBox(height: 16),
-          _buildQuickActions(currentPage),
-        ],
-      ),
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      bloc: _dashboardBloc,
+      builder: (context, state) {
+        return RefreshIndicator(
+          onRefresh: () async {
+            _dashboardBloc.add(const RefreshDashboard());
+            // Wait for the state to change from the current one
+            await _dashboardBloc.stream.first;
+          },
+          color: primaryGradientStart,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Quick Stats Cards
+                _buildQuickStats(state),
+                const SizedBox(height: 24),
+                // Recent Activity Section
+                _buildSectionTitle('Recent Activity'),
+                const SizedBox(height: 16),
+                _buildRecentActivityList(state),
+                const SizedBox(height: 24),
+                // Quick Actions
+                _buildSectionTitle('Quick Actions'),
+                const SizedBox(height: 16),
+                _buildQuickActions(currentPage),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildQuickStats() {
+  Widget _buildQuickStats(DashboardState state) {
+    final dashData = state.stats;
+    final isLoading = state.status == DashboardStatus.loading;
+
     final stats = [
       _StatCard(
         title: 'Total Tables',
-        value: '24',
+        value: isLoading ? '-' : '${dashData.totalTables}',
         icon: Icons.table_bar_rounded,
         color: const Color(0xFF38A169),
-        trend: '18 Free',
+        trend: isLoading ? '...' : '${dashData.freeTables} Free',
         isPositive: true,
       ),
       _StatCard(
         title: 'Active Orders',
-        value: '12',
+        value: isLoading ? '-' : '${dashData.activeOrders}',
         icon: Icons.receipt_long_rounded,
         color: const Color(0xFF3182CE),
-        trend: '+3 new',
-        isPositive: true,
+        trend: isLoading
+            ? '...'
+            : dashData.activeOrders > 0
+                ? '${dashData.activeOrders} active'
+                : 'None',
+        isPositive: dashData.activeOrders > 0,
       ),
       _StatCard(
         title: 'Kitchen Queue',
-        value: '8',
+        value: isLoading ? '-' : '${dashData.kitchenQueueItems}',
         icon: Icons.soup_kitchen_rounded,
         color: const Color(0xFFE53E3E),
-        trend: 'Pending',
-        isPositive: false,
+        trend: isLoading
+            ? '...'
+            : dashData.kitchenQueueItems > 0
+                ? 'Pending'
+                : 'Clear',
+        isPositive: dashData.kitchenQueueItems == 0,
       ),
       _StatCard(
         title: "Today's Sales",
-        value: '\$1,842',
+        value: isLoading
+            ? '-'
+            : '\$${dashData.todaysSales.toStringAsFixed(0)}',
         icon: Icons.point_of_sale_rounded,
         color: const Color(0xFF805AD5),
-        trend: '+15%',
-        isPositive: true,
+        trend: isLoading
+            ? '...'
+            : '${dashData.todaysBillCount} bills',
+        isPositive: dashData.todaysSales > 0,
       ),
     ];
 
@@ -432,37 +481,87 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildRecentActivityList() {
-    final activities = [
-      _Activity(
-        title: 'New Order',
-        subtitle: 'Table 5 - 4 items',
-        time: '2 min ago',
-        icon: Icons.receipt_long_rounded,
-        color: const Color(0xFF3182CE),
-      ),
-      _Activity(
-        title: 'Order Ready',
-        subtitle: 'Table 3 - Ready to serve',
-        time: '5 min ago',
-        icon: Icons.soup_kitchen_rounded,
-        color: const Color(0xFF38A169),
-      ),
-      _Activity(
-        title: 'Bill Generated',
-        subtitle: 'Table 8 - \$125.50',
-        time: '12 min ago',
-        icon: Icons.point_of_sale_rounded,
-        color: const Color(0xFF805AD5),
-      ),
-      _Activity(
-        title: 'Table Occupied',
-        subtitle: 'Table 12 - 6 guests',
-        time: '18 min ago',
-        icon: Icons.table_bar_rounded,
-        color: const Color(0xFFD69E2E),
-      ),
-    ];
+  IconData _getActivityIcon(ActivityType type) {
+    switch (type) {
+      case ActivityType.newOrder:
+        return Icons.receipt_long_rounded;
+      case ActivityType.orderReady:
+        return Icons.soup_kitchen_rounded;
+      case ActivityType.billGenerated:
+        return Icons.point_of_sale_rounded;
+      case ActivityType.billPaid:
+        return Icons.payments_rounded;
+      case ActivityType.tableOccupied:
+        return Icons.table_bar_rounded;
+    }
+  }
+
+  Color _getActivityColor(ActivityType type) {
+    switch (type) {
+      case ActivityType.newOrder:
+        return const Color(0xFF3182CE);
+      case ActivityType.orderReady:
+        return const Color(0xFF38A169);
+      case ActivityType.billGenerated:
+        return const Color(0xFF805AD5);
+      case ActivityType.billPaid:
+        return const Color(0xFF38A169);
+      case ActivityType.tableOccupied:
+        return const Color(0xFFD69E2E);
+    }
+  }
+
+  Widget _buildRecentActivityList(DashboardState state) {
+    final recentActivities = state.stats.recentActivities;
+
+    if (state.status == DashboardStatus.loading) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (recentActivities.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.inbox_rounded, size: 40, color: textMuted.withValues(alpha: 0.5)),
+              const SizedBox(height: 8),
+              Text(
+                'No recent activity',
+                style: TextStyle(color: textMuted, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -479,14 +578,16 @@ class _HomePageState extends State<HomePage> {
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: activities.length,
+        itemCount: recentActivities.length,
         separatorBuilder: (context, index) => Divider(
           height: 1,
           color: Colors.grey.withValues(alpha: 0.1),
           indent: 72,
         ),
         itemBuilder: (context, index) {
-          final activity = activities[index];
+          final activity = recentActivities[index];
+          final icon = _getActivityIcon(activity.type);
+          final color = _getActivityColor(activity.type);
           return ListTile(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 20,
@@ -498,13 +599,13 @@ class _HomePageState extends State<HomePage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    activity.color.withValues(alpha: 0.2),
-                    activity.color.withValues(alpha: 0.1),
+                    color.withValues(alpha: 0.2),
+                    color.withValues(alpha: 0.1),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(activity.icon, color: activity.color, size: 24),
+              child: Icon(icon, color: color, size: 24),
             ),
             title: Text(
               activity.title,
@@ -704,22 +805,6 @@ class _StatCard {
     required this.color,
     required this.trend,
     required this.isPositive,
-  });
-}
-
-class _Activity {
-  final String title;
-  final String subtitle;
-  final String time;
-  final IconData icon;
-  final Color color;
-
-  _Activity({
-    required this.title,
-    required this.subtitle,
-    required this.time,
-    required this.icon,
-    required this.color,
   });
 }
 

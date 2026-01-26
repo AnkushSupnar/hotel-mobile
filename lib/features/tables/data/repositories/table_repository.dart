@@ -103,6 +103,33 @@ class TableRepository {
     return TableStorageService.isFavorite(tableId);
   }
 
+  // Close a table
+  Future<Map<String, dynamic>?> closeTable(int tableId) async {
+    AppLogger.info('Closing table $tableId');
+    try {
+      final response = await _apiClient.post(
+        'billing/tables/$tableId/close',
+        body: {
+          'tableId': tableId,
+          'customerId': 0,
+          'waitorId': 0,
+          'userId': 0,
+        },
+        includeAuth: true,
+      );
+
+      if (response.success && response.data != null) {
+        AppLogger.info('Table $tableId closed successfully');
+        return response.data;
+      } else {
+        throw Exception(response.message ?? 'Failed to close table');
+      }
+    } catch (e) {
+      AppLogger.error('Error closing table $tableId', error: e);
+      rethrow;
+    }
+  }
+
   // Clear cache and force refresh
   Future<List<DiningTableModel>> refreshTables() async {
     await TableStorageService.clearTables();

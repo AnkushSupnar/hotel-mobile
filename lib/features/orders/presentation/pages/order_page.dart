@@ -13,12 +13,14 @@ class OrderPage extends StatelessWidget {
   final DiningTableModel table;
   final WaiterModel? waiter;
   final bool loadExistingOrders;
+  final bool isTableClosed;
 
   const OrderPage({
     super.key,
     required this.table,
     this.waiter,
     this.loadExistingOrders = false,
+    this.isTableClosed = false,
   });
 
   @override
@@ -28,7 +30,7 @@ class OrderPage extends StatelessWidget {
         ..add(loadExistingOrders
             ? LoadMenuWithExistingOrders(tableId: table.id)
             : const LoadMenu()),
-      child: OrderView(table: table, waiter: waiter),
+      child: OrderView(table: table, waiter: waiter, isTableClosed: isTableClosed),
     );
   }
 }
@@ -36,8 +38,9 @@ class OrderPage extends StatelessWidget {
 class OrderView extends StatefulWidget {
   final DiningTableModel table;
   final WaiterModel? waiter;
+  final bool isTableClosed;
 
-  const OrderView({super.key, required this.table, this.waiter});
+  const OrderView({super.key, required this.table, this.waiter, this.isTableClosed = false});
 
   @override
   State<OrderView> createState() => _OrderViewState();
@@ -119,10 +122,12 @@ class _OrderViewState extends State<OrderView> {
         right: 16,
       ),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [primaryGradientStart, primaryGradientEnd],
+          colors: widget.isTableClosed
+              ? [Colors.red.shade700, Colors.red.shade500]
+              : [primaryGradientStart, primaryGradientEnd],
         ),
         boxShadow: [
           BoxShadow(
@@ -164,9 +169,9 @@ class _OrderViewState extends State<OrderView> {
               children: [
                 Row(
                   children: [
-                    const Text(
-                      'New Order',
-                      style: TextStyle(
+                    Text(
+                      widget.isTableClosed ? 'Closed Order' : 'New Order',
+                      style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -408,19 +413,21 @@ class _OrderViewState extends State<OrderView> {
   }
 
   Widget _buildExistingOrdersBar(BuildContext context, OrderState state) {
+    final barColor = widget.isTableClosed ? Colors.red : successColor;
+
     return Container(
       margin: const EdgeInsets.only(top: 12, left: 16, right: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            successColor.withValues(alpha: 0.15),
-            successColor.withValues(alpha: 0.08),
+            barColor.withValues(alpha: 0.15),
+            barColor.withValues(alpha: 0.08),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: successColor.withValues(alpha: 0.3),
+          color: barColor.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -432,12 +439,12 @@ class _OrderViewState extends State<OrderView> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: successColor.withValues(alpha: 0.2),
+                color: barColor.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                Icons.receipt_long_rounded,
-                color: successColor,
+                widget.isTableClosed ? Icons.lock_rounded : Icons.receipt_long_rounded,
+                color: barColor,
                 size: 22,
               ),
             ),
@@ -447,7 +454,7 @@ class _OrderViewState extends State<OrderView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Existing Orders',
+                    widget.isTableClosed ? 'Closed Orders (Read Only)' : 'Existing Orders',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -459,7 +466,7 @@ class _OrderViewState extends State<OrderView> {
                     '${state.existingOrdersItemCount} items • ₹${state.existingOrdersTotal.toStringAsFixed(0)}',
                     style: TextStyle(
                       fontSize: 13,
-                      color: successColor,
+                      color: barColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -469,7 +476,7 @@ class _OrderViewState extends State<OrderView> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: successColor,
+                color: barColor,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -508,6 +515,7 @@ class _OrderViewState extends State<OrderView> {
           tableId: widget.table.id,
           tableNumber: widget.table.tableName,
           sectionName: widget.table.section,
+          isTableClosed: widget.isTableClosed,
         ),
       ),
     );
@@ -632,9 +640,11 @@ class _OrderViewState extends State<OrderView> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          context.read<OrderBloc>().add(AddItemToOrder(item));
-        },
+        onTap: widget.isTableClosed
+            ? null
+            : () {
+                context.read<OrderBloc>().add(AddItemToOrder(item));
+              },
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(12),
@@ -804,7 +814,7 @@ class _OrderViewState extends State<OrderView> {
   }
 
   Widget _buildOrderSummary(BuildContext context, OrderState state) {
-    if (state.orderItems.isEmpty) {
+    if (state.orderItems.isEmpty || widget.isTableClosed) {
       return const SizedBox.shrink();
     }
 
@@ -986,7 +996,7 @@ class _OrderViewState extends State<OrderView> {
   }
 
   void _showExitConfirmation(BuildContext context, OrderState state) {
-    if (state.orderItems.isEmpty) {
+    if (widget.isTableClosed || state.orderItems.isEmpty) {
       Navigator.of(context).pop();
       return;
     }
@@ -1381,6 +1391,7 @@ class _ExistingOrdersSheet extends StatelessWidget {
   final int tableId;
   final String tableNumber;
   final String sectionName;
+  final bool isTableClosed;
 
   static const Color successColor = Color(0xFF38A169);
   static const Color textDark = Color(0xFF1A202C);
@@ -1390,6 +1401,7 @@ class _ExistingOrdersSheet extends StatelessWidget {
     required this.tableId,
     required this.tableNumber,
     required this.sectionName,
+    this.isTableClosed = false,
   });
 
   @override
@@ -1456,12 +1468,14 @@ class _ExistingOrdersSheet extends StatelessWidget {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [successColor, successColor.withValues(alpha: 0.8)],
+                          colors: isTableClosed
+                              ? [Colors.red.shade500, Colors.red.shade400]
+                              : [successColor, successColor.withValues(alpha: 0.8)],
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(
-                        Icons.receipt_long_rounded,
+                      child: Icon(
+                        isTableClosed ? Icons.lock_rounded : Icons.receipt_long_rounded,
                         color: Colors.white,
                         size: 24,
                       ),
@@ -1471,9 +1485,9 @@ class _ExistingOrdersSheet extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Existing Orders',
-                            style: TextStyle(
+                          Text(
+                            isTableClosed ? 'Closed Orders' : 'Existing Orders',
+                            style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: textDark,
@@ -1507,7 +1521,7 @@ class _ExistingOrdersSheet extends StatelessWidget {
                   separatorBuilder: (context, index) => const Divider(height: 24),
                   itemBuilder: (context, index) {
                     final item = transactions[index];
-                    return _buildTransactionItemRow(context, item, index);
+                    return _buildTransactionItemRow(context, item, index, isTableClosed);
                   },
                 ),
               ),
@@ -1560,7 +1574,7 @@ class _ExistingOrdersSheet extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (state.hasModifiedTransactions || state.modifiedTransactionIds.isNotEmpty) ...[
+                      if (!isTableClosed && (state.hasModifiedTransactions || state.modifiedTransactionIds.isNotEmpty)) ...[
                         const SizedBox(height: 16),
                         // Send Order Button
                         SizedBox(
@@ -1634,7 +1648,7 @@ class _ExistingOrdersSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildTransactionItemRow(BuildContext context, TransactionItemModel item, int index) {
+  Widget _buildTransactionItemRow(BuildContext context, TransactionItemModel item, int index, bool isReadOnly) {
     final isRemoved = item.quantity == 0;
     final displayColor = isRemoved ? textMuted.withValues(alpha: 0.5) : textDark;
     final itemAmount = item.quantity * item.rate;
@@ -1693,43 +1707,53 @@ class _ExistingOrdersSheet extends StatelessWidget {
               ],
             ),
           ),
-          // Quantity controls
-          Row(
-            children: [
-              _buildQuantityButton(
-                context,
-                Icons.remove,
-                isRemoved
-                    ? null
-                    : () {
-                        context.read<OrderBloc>().add(
-                              UpdateExistingTransactionQuantity(item.id, item.quantity - 1),
-                            );
-                      },
-                disabled: isRemoved,
-              ),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  '${item.quantity}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: displayColor,
+          // Quantity controls (hidden for closed tables)
+          if (!isReadOnly)
+            Row(
+              children: [
+                _buildQuantityButton(
+                  context,
+                  Icons.remove,
+                  isRemoved
+                      ? null
+                      : () {
+                          context.read<OrderBloc>().add(
+                                UpdateExistingTransactionQuantity(item.id, item.quantity - 1),
+                              );
+                        },
+                  disabled: isRemoved,
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    '${item.quantity}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: displayColor,
+                    ),
                   ),
                 ),
+                _buildQuantityButton(
+                  context,
+                  Icons.add,
+                  () {
+                    context.read<OrderBloc>().add(
+                          UpdateExistingTransactionQuantity(item.id, item.quantity + 1),
+                        );
+                  },
+                ),
+              ],
+            ),
+          if (isReadOnly)
+            Text(
+              'x${item.quantity}',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: textMuted,
               ),
-              _buildQuantityButton(
-                context,
-                Icons.add,
-                () {
-                  context.read<OrderBloc>().add(
-                        UpdateExistingTransactionQuantity(item.id, item.quantity + 1),
-                      );
-                },
-              ),
-            ],
-          ),
+            ),
           const SizedBox(width: 16),
           // Item total
           SizedBox(
