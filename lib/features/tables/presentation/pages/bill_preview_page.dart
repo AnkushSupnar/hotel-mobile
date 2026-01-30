@@ -140,6 +140,8 @@ class _BillPreviewPageState extends State<BillPreviewPage> {
               canChangeOrientation: false,
               canChangePageFormat: false,
               canDebug: false,
+              allowPrinting: false,
+              allowSharing: false,
               pdfFileName: 'Bill_${widget.tableName}.pdf',
             ),
           ),
@@ -218,6 +220,55 @@ class _BillPreviewPageState extends State<BillPreviewPage> {
                   ),
                 ),
               ],
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Printing.sharePdf(
+                  bytes: widget.pdfBytes,
+                  filename: 'Bill_${widget.tableName}.pdf',
+                );
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.share_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Printing.layoutPdf(
+                  onLayout: (_) => Future.value(widget.pdfBytes),
+                  name: 'Bill_${widget.tableName}',
+                );
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.print_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
             ),
           ),
         ],

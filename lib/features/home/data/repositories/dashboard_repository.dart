@@ -104,12 +104,14 @@ class DashboardRepository {
           final billData = data['data'];
 
           if (billData is Map<String, dynamic>) {
-            // If data has summary fields
-            if (billData.containsKey('totalAmount')) {
-              totalSales = (billData['totalAmount'] as num?)?.toDouble() ?? 0.0;
-            }
-            if (billData.containsKey('totalBills')) {
-              billCount = (billData['totalBills'] as num?)?.toInt() ?? 0;
+            // Parse summary fields
+            if (billData.containsKey('summary') &&
+                billData['summary'] is Map<String, dynamic>) {
+              final summary = billData['summary'] as Map<String, dynamic>;
+              totalSales =
+                  (summary['totalAmount'] as num?)?.toDouble() ?? 0.0;
+              billCount =
+                  (summary['billCount'] as num?)?.toInt() ?? 0;
             }
             if (billData.containsKey('bills') && billData['bills'] is List) {
               recentBills = (billData['bills'] as List)
@@ -185,8 +187,8 @@ class DashboardRepository {
     // Add activities from recent bills
     for (final bill in recentBills.take(5)) {
       final billNo = bill['billNo'] ?? bill['id'] ?? '';
-      final amount = (bill['totalAmount'] as num?)?.toDouble() ??
-          (bill['amount'] as num?)?.toDouble() ??
+      final amount = (bill['netAmount'] as num?)?.toDouble() ??
+          (bill['billAmount'] as num?)?.toDouble() ??
           0.0;
       final status = (bill['status'] as String?) ?? '';
       final tableName = bill['tableName'] as String? ?? 'Table';
@@ -194,7 +196,7 @@ class DashboardRepository {
       if (status.toLowerCase() == 'paid') {
         activities.add(RecentActivity(
           title: 'Bill Paid',
-          subtitle: '$tableName - \$${amount.toStringAsFixed(2)}',
+          subtitle: '$tableName - ₹${amount.toStringAsFixed(2)}',
           time: _formatBillTime(bill),
           type: ActivityType.billPaid,
         ));
@@ -208,7 +210,7 @@ class DashboardRepository {
       } else if (status.toLowerCase() == 'credit') {
         activities.add(RecentActivity(
           title: 'Credit Bill',
-          subtitle: '$tableName - \$${amount.toStringAsFixed(2)}',
+          subtitle: '$tableName - ₹${amount.toStringAsFixed(2)}',
           time: _formatBillTime(bill),
           type: ActivityType.billPaid,
         ));

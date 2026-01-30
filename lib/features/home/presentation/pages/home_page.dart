@@ -7,6 +7,7 @@ import 'package:hotel/features/home/bloc/dashboard_event.dart';
 import 'package:hotel/features/home/bloc/dashboard_state.dart';
 import 'package:hotel/features/home/data/models/dashboard_stats.dart';
 import 'package:hotel/features/home/presentation/widgets/app_drawer.dart';
+import 'package:hotel/features/kitchen/presentation/pages/kitchen_page.dart';
 import 'package:hotel/features/tables/presentation/pages/table_selection_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -321,7 +322,7 @@ class _HomePageState extends State<HomePage> {
         isPositive: true,
       ),
       _StatCard(
-        title: 'Active Orders',
+        title: 'Active Tables',
         value: isLoading ? '-' : '${dashData.activeOrders}',
         icon: Icons.receipt_long_rounded,
         color: const Color(0xFF3182CE),
@@ -345,16 +346,12 @@ class _HomePageState extends State<HomePage> {
         isPositive: dashData.kitchenQueueItems == 0,
       ),
       _StatCard(
-        title: "Today's Sales",
-        value: isLoading
-            ? '-'
-            : '\$${dashData.todaysSales.toStringAsFixed(0)}',
-        icon: Icons.point_of_sale_rounded,
+        title: "Completed Tables",
+        value: isLoading ? '-' : '${dashData.todaysBillCount}',
+        icon: Icons.check_circle_outline_rounded,
         color: const Color(0xFF805AD5),
-        trend: isLoading
-            ? '...'
-            : '${dashData.todaysBillCount} bills',
-        isPositive: dashData.todaysSales > 0,
+        trend: isLoading ? '...' : 'Today',
+        isPositive: dashData.todaysBillCount > 0,
       ),
     ];
 
@@ -650,7 +647,11 @@ class _HomePageState extends State<HomePage> {
         icon: Icons.table_bar_rounded,
         color: const Color(0xFF38A169),
         onTap: () {
-          setState(() => _selectedIndex = 1);
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const TableSelectionPage(showOnlyActive: true),
+            ),
+          );
         },
       ),
       _QuickAction(
@@ -658,7 +659,9 @@ class _HomePageState extends State<HomePage> {
         icon: Icons.soup_kitchen_rounded,
         color: const Color(0xFFE53E3E),
         onTap: () {
-          setState(() => _selectedIndex = 4);
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const KitchenPage()),
+          );
         },
       ),
       _QuickAction(

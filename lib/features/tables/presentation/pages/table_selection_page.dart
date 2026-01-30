@@ -14,19 +14,23 @@ import 'package:hotel/features/tables/data/models/waiter_model.dart';
 import 'package:hotel/features/tables/presentation/pages/bill_preview_page.dart';
 
 class TableSelectionPage extends StatelessWidget {
-  const TableSelectionPage({super.key});
+  final bool showOnlyActive;
+
+  const TableSelectionPage({super.key, this.showOnlyActive = false});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => TableSelectionBloc()..add(const LoadTables()),
-      child: const TableSelectionView(),
+      child: TableSelectionView(showOnlyActive: showOnlyActive),
     );
   }
 }
 
 class TableSelectionView extends StatelessWidget {
-  const TableSelectionView({super.key});
+  final bool showOnlyActive;
+
+  const TableSelectionView({super.key, this.showOnlyActive = false});
 
   // Modern Material Color Palette
   static const Color primaryGradientStart = Color(0xFF667eea);
@@ -159,6 +163,10 @@ class TableSelectionView extends StatelessWidget {
                   );
                 }
 
+                if (showOnlyActive) {
+                  return _buildActiveTablesGrid(context, state);
+                }
+
                 return Column(
                   children: [
                     _buildSectionTabs(context, state),
@@ -230,9 +238,9 @@ class TableSelectionView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Select Table',
-                  style: TextStyle(
+                Text(
+                  showOnlyActive ? 'Active Tables' : 'Select Table',
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -240,7 +248,9 @@ class TableSelectionView extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Choose a table to start new order',
+                  showOnlyActive
+                      ? 'Tap a table to manage orders'
+                      : 'Choose a table to start new order',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.white.withValues(alpha: 0.8),
@@ -542,6 +552,68 @@ class TableSelectionView extends StatelessWidget {
       itemBuilder: (context, index) {
         final table = tables[index];
         return _buildTableCard(context, state, table, sectionColor);
+      },
+    );
+  }
+
+  Widget _buildActiveTablesGrid(BuildContext context, TableSelectionState state) {
+    final activeTables = state.sections
+        .expand((s) => s.tables)
+        .where((t) => t.isOngoing)
+        .toList();
+
+    if (activeTables.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF38A169).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.table_bar_rounded,
+                size: 64,
+                color: const Color(0xFF38A169).withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'No Active Tables',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'There are no tables with ongoing orders right now',
+              style: TextStyle(
+                fontSize: 14,
+                color: textMuted,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1,
+      ),
+      itemCount: activeTables.length,
+      itemBuilder: (context, index) {
+        final table = activeTables[index];
+        return _buildTableCard(context, state, table, const Color(0xFF38A169));
       },
     );
   }
