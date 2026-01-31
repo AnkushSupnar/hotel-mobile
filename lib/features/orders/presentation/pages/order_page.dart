@@ -610,13 +610,16 @@ class _OrderViewState extends State<OrderView> {
       );
     }
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final childAspectRatio = screenWidth < 360 ? 1.9 : 2.3;
+
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.3,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: childAspectRatio,
       ),
       itemCount: state.currentItems.length,
       itemBuilder: (context, index) {
@@ -637,177 +640,184 @@ class _OrderViewState extends State<OrderView> {
         ? categoryColors[categoryIndex % categoryColors.length]
         : accentColor;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: widget.isTableClosed
-            ? null
-            : () {
-                context.read<OrderBloc>().add(AddItemToOrder(item));
-              },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: isInOrder
-                ? Border.all(color: successColor, width: 2)
-                : null,
-            boxShadow: [
-              BoxShadow(
-                color: (isInOrder ? successColor : color).withValues(alpha: 0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final nameFontSize = (w * 0.095).clamp(12.0, 16.0);
+        final priceFontSize = (w * 0.08).clamp(11.0, 14.0);
+        final iconSize = (w * 0.1).clamp(14.0, 18.0);
+        final smallIconSize = (w * 0.085).clamp(12.0, 16.0);
+        final badgeFontSize = (w * 0.065).clamp(9.0, 12.0);
+        final pad = (w * 0.06).clamp(8.0, 12.0);
+        final gap = (w * 0.025).clamp(3.0, 6.0);
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.isTableClosed
+                ? null
+                : () {
+                    context.read<OrderBloc>().add(AddItemToOrder(item));
+                  },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: pad, vertical: pad * 0.7),
+              decoration: BoxDecoration(
+                color: isInOrder ? successColor.withValues(alpha: 0.05) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: isInOrder
+                    ? Border.all(color: successColor.withValues(alpha: 0.4), width: 1.5)
+                    : Border.all(color: color.withValues(alpha: 0.08), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isInOrder ? successColor : color).withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (isFavorite)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4, top: 2),
-                            child: Icon(
-                              Icons.star_rounded,
-                              size: 16,
-                              color: const Color(0xFFED8936),
-                            ),
+                  // Row 1: Name with star + optional quantity badge
+                  Row(
+                    children: [
+                      if (isFavorite)
+                        Padding(
+                          padding: EdgeInsets.only(right: gap),
+                          child: Icon(
+                            Icons.star_rounded,
+                            size: smallIconSize,
+                            color: const Color(0xFFED8936),
                           ),
-                        Expanded(
+                        ),
+                      Expanded(
+                        child: Text(
+                          item.itemName,
+                          style: AppFonts.kiranText(
+                            fontSize: nameFontSize,
+                            fontWeight: FontWeight.w600,
+                            color: textDark,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isInOrder)
+                        Container(
+                          margin: EdgeInsets.only(left: gap),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: gap * 1.5,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: successColor,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           child: Text(
-                            item.itemName,
-                            style: AppFonts.kiranText(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: textDark,
+                            '$quantity',
+                            style: TextStyle(
+                              fontSize: badgeFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
-                  if (isInOrder)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: successColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$quantity',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                  SizedBox(height: gap),
+                  // Row 2: Price badge + action buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: pad * 0.6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '₹${item.rate.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: priceFontSize,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
                         ),
                       ),
-                    ),
+                      if (isInOrder)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildQuantityButton(
+                              context,
+                              Icons.remove,
+                              () {
+                                context.read<OrderBloc>().add(
+                                      UpdateItemQuantity(item.id, quantity - 1),
+                                    );
+                              },
+                              iconSize: smallIconSize,
+                            ),
+                            SizedBox(width: gap),
+                            _buildQuantityButton(
+                              context,
+                              Icons.add,
+                              () {
+                                context.read<OrderBloc>().add(
+                                      UpdateItemQuantity(item.id, quantity + 1),
+                                    );
+                              },
+                              iconSize: smallIconSize,
+                            ),
+                          ],
+                        )
+                      else
+                        Container(
+                          padding: EdgeInsets.all(pad * 0.45),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.add_rounded,
+                            color: color,
+                            size: iconSize,
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
-              const Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          color.withValues(alpha: 0.15),
-                          color.withValues(alpha: 0.05),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '₹${item.rate.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                  ),
-                  if (isInOrder)
-                    Row(
-                      children: [
-                        _buildQuantityButton(
-                          context,
-                          Icons.remove,
-                          () {
-                            context.read<OrderBloc>().add(
-                                  UpdateItemQuantity(item.id, quantity - 1),
-                                );
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        _buildQuantityButton(
-                          context,
-                          Icons.add,
-                          () {
-                            context.read<OrderBloc>().add(
-                                  UpdateItemQuantity(item.id, quantity + 1),
-                                );
-                          },
-                        ),
-                      ],
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.add_rounded,
-                        color: color,
-                        size: 20,
-                      ),
-                    ),
-                ],
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildQuantityButton(
     BuildContext context,
     IconData icon,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    double iconSize = 18,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.all(6),
+          padding: EdgeInsets.all(iconSize * 0.3),
           decoration: BoxDecoration(
             color: textMuted.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
           ),
-          child: Icon(icon, size: 18, color: textDark),
+          child: Icon(icon, size: iconSize, color: textDark),
         ),
       ),
     );

@@ -466,6 +466,10 @@ class TableSelectionView extends StatelessWidget {
   }
 
   Widget _buildTableGrid(BuildContext context, TableSelectionState state) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = screenWidth < 320 ? 2 : 3;
+    final childAspectRatio = screenWidth < 360 ? 0.85 : (screenWidth < 400 ? 0.92 : 1.0);
+
     // Show favorites when no section selected or Favorites section selected
     if (state.selectedSection == null || state.selectedSection == TableSelectionState.favoritesSection) {
       if (state.favoriteTables.isEmpty) {
@@ -522,11 +526,11 @@ class TableSelectionView extends StatelessWidget {
       // Show favorites grid
       return GridView.builder(
         padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: 1,
+          childAspectRatio: childAspectRatio,
         ),
         itemCount: state.favoriteTables.length,
         itemBuilder: (context, index) {
@@ -542,11 +546,11 @@ class TableSelectionView extends StatelessWidget {
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1,
+        childAspectRatio: childAspectRatio,
       ),
       itemCount: tables.length,
       itemBuilder: (context, index) {
@@ -557,6 +561,10 @@ class TableSelectionView extends StatelessWidget {
   }
 
   Widget _buildActiveTablesGrid(BuildContext context, TableSelectionState state) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = screenWidth < 320 ? 2 : 3;
+    final childAspectRatio = screenWidth < 360 ? 0.85 : (screenWidth < 400 ? 0.92 : 1.0);
+
     final activeTables = state.sections
         .expand((s) => s.tables)
         .where((t) => t.isOngoing)
@@ -604,11 +612,11 @@ class TableSelectionView extends StatelessWidget {
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1,
+        childAspectRatio: childAspectRatio,
       ),
       itemCount: activeTables.length,
       itemBuilder: (context, index) {
@@ -691,131 +699,164 @@ class TableSelectionView extends StatelessWidget {
               ),
             ],
           ),
-          child: Stack(
-            children: [
-              // Favorite indicator
-              if (isFavorite && !isFavoriteSection)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Icon(
-                    Icons.star_rounded,
-                    color: Colors.amber,
-                    size: 18,
-                  ),
-                ),
-              // Close button for ongoing tables
-              if (isOngoing)
-                Positioned(
-                  top: 6,
-                  left: 6,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: isClosing
-                          ? null
-                          : () => _showCloseTableDialog(context, table),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: isClosing
-                            ? SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.red.shade400,
-                                ),
-                              )
-                            : Icon(
-                                Icons.lock_outline_rounded,
-                                color: Colors.red.shade400,
-                                size: 16,
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-              // Closed lock icon
-              if (isClosed)
-                Positioned(
-                  top: 6,
-                  left: 6,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.lock_rounded,
-                      color: Colors.red.shade400,
-                      size: 16,
-                    ),
-                  ),
-                ),
-              // Table content
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: (isOngoing || isClosed)
-                              ? [
-                                  iconColor.withValues(alpha: 0.3),
-                                  iconColor.withValues(alpha: 0.15),
-                                ]
-                              : [
-                                  sectionColor.withValues(alpha: 0.15),
-                                  sectionColor.withValues(alpha: 0.05),
-                                ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final w = constraints.maxWidth;
+              final h = constraints.maxHeight;
+              // Scale all dimensions relative to card size
+              final iconSize = (w * 0.26).clamp(16.0, 32.0);
+              final iconPadding = (w * 0.13).clamp(8.0, 16.0);
+              final iconRadius = (w * 0.15).clamp(10.0, 18.0);
+              final nameFontSize = (w * 0.15).clamp(10.0, 18.0);
+              final statusFontSize = (w * 0.094).clamp(7.0, 12.0);
+              final smallIconSize = (w * 0.15).clamp(12.0, 18.0);
+              final starIconSize = (w * 0.16).clamp(12.0, 20.0);
+              final posOffset = (w * 0.06).clamp(4.0, 8.0);
+              final smallPad = (w * 0.035).clamp(2.0, 5.0);
+              final badgeHPad = (w * 0.09).clamp(6.0, 12.0);
+              final badgeRadius = (w * 0.075).clamp(6.0, 10.0);
+
+              return Stack(
+                children: [
+                  // Favorite indicator
+                  if (isFavorite && !isFavoriteSection)
+                    Positioned(
+                      top: posOffset,
+                      right: posOffset,
                       child: Icon(
-                        Icons.table_bar_rounded,
-                        color: iconColor,
-                        size: 28,
+                        Icons.star_rounded,
+                        color: Colors.amber,
+                        size: starIconSize,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      table.tableName,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: nameColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        table.status,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: statusColor,
+                  // Close button for ongoing tables
+                  if (isOngoing)
+                    Positioned(
+                      top: posOffset,
+                      left: posOffset,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: isClosing
+                              ? null
+                              : () => _showCloseTableDialog(context, table),
+                          borderRadius: BorderRadius.circular(posOffset + 2),
+                          child: Container(
+                            padding: EdgeInsets.all(smallPad),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(posOffset + 2),
+                            ),
+                            child: isClosing
+                                ? SizedBox(
+                                    width: smallIconSize,
+                                    height: smallIconSize,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.red.shade400,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.lock_outline_rounded,
+                                    color: Colors.red.shade400,
+                                    size: smallIconSize,
+                                  ),
+                          ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
+                  // Closed lock icon
+                  if (isClosed)
+                    Positioned(
+                      top: posOffset,
+                      left: posOffset,
+                      child: Container(
+                        padding: EdgeInsets.all(smallPad),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(posOffset + 2),
+                        ),
+                        child: Icon(
+                          Icons.lock_rounded,
+                          color: Colors.red.shade400,
+                          size: smallIconSize,
+                        ),
+                      ),
+                    ),
+                  // Table content
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: w * 0.06,
+                        vertical: h * 0.04,
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(iconPadding),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: (isOngoing || isClosed)
+                                      ? [
+                                          iconColor.withValues(alpha: 0.3),
+                                          iconColor.withValues(alpha: 0.15),
+                                        ]
+                                      : [
+                                          sectionColor.withValues(alpha: 0.15),
+                                          sectionColor.withValues(alpha: 0.05),
+                                        ],
+                                ),
+                                borderRadius: BorderRadius.circular(iconRadius),
+                              ),
+                              child: Icon(
+                                Icons.table_bar_rounded,
+                                color: iconColor,
+                                size: iconSize,
+                              ),
+                            ),
+                            SizedBox(height: h * 0.06),
+                            Text(
+                              table.tableName,
+                              style: TextStyle(
+                                fontSize: nameFontSize,
+                                fontWeight: FontWeight.bold,
+                                color: nameColor,
+                              ),
+                              maxLines: 1,
+                            ),
+                            SizedBox(height: h * 0.03),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: badgeHPad,
+                                vertical: smallPad,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(badgeRadius),
+                              ),
+                              child: Text(
+                                table.status,
+                                style: TextStyle(
+                                  fontSize: statusFontSize,
+                                  fontWeight: FontWeight.w600,
+                                  color: statusColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
