@@ -8,7 +8,7 @@ class ApiConfigService {
 
   // Default values
   static const String defaultServerUrl = 'http://localhost:8081';
-  static const String defaultApiVersion = 'api';
+  static const String defaultApiVersion = 'api/v1';
   static const int defaultTimeout = 30; // seconds
 
   // Get server URL

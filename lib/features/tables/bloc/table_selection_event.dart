@@ -8,7 +8,12 @@ abstract class TableSelectionEvent extends Equatable {
 }
 
 class LoadTables extends TableSelectionEvent {
-  const LoadTables();
+  final bool forceRefresh;
+
+  const LoadTables({this.forceRefresh = false});
+
+  @override
+  List<Object?> get props => [forceRefresh];
 }
 
 class SelectSection extends TableSelectionEvent {

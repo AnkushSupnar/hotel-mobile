@@ -217,8 +217,8 @@ class _AppDrawerState extends State<AppDrawer> {
         color: const Color(0xFFE53E3E),
       ),
       _MenuItem(
-        icon: Icons.point_of_sale_rounded,
-        title: 'Billing',
+        icon: Icons.sync_rounded,
+        title: 'Sync Data',
         color: const Color(0xFF805AD5),
       ),
       _MenuItem(

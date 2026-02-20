@@ -47,9 +47,10 @@ class AppLogger {
   }
 
   // API specific logging
-  static void apiRequest(String method, String endpoint, {Map<String, dynamic>? body}) {
+  static void apiRequest(String method, String endpoint, {Map<String, dynamic>? body, String? fullUrl}) {
     final bodyInfo = body != null ? ' | Body: ${body.keys.join(', ')}' : '';
-    _log(_levelApi, '>>> $method $endpoint$bodyInfo', tag: 'API');
+    final urlInfo = fullUrl != null ? ' | URL: $fullUrl' : '';
+    _log(_levelApi, '>>> $method $endpoint$urlInfo$bodyInfo', tag: 'API');
   }
 
   static void apiResponse(String endpoint, int statusCode, bool success, {String? message}) {

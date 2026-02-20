@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hotel/features/auth/data/models/user_model.dart';
@@ -7,8 +9,13 @@ import 'package:hotel/features/home/bloc/dashboard_event.dart';
 import 'package:hotel/features/home/bloc/dashboard_state.dart';
 import 'package:hotel/features/home/data/models/dashboard_stats.dart';
 import 'package:hotel/features/home/presentation/widgets/app_drawer.dart';
+import 'package:hotel/features/kitchen/presentation/pages/kitchen_overview_page.dart';
 import 'package:hotel/features/kitchen/presentation/pages/kitchen_page.dart';
+import 'package:hotel/features/menu_items/presentation/pages/menu_items_page.dart';
+import 'package:hotel/features/orders_overview/presentation/pages/orders_overview_page.dart';
 import 'package:hotel/features/tables/presentation/pages/table_selection_page.dart';
+import 'package:hotel/features/sync/presentation/pages/sync_data_page.dart';
+import 'package:hotel/features/tables/presentation/pages/tables_overview_page.dart';
 
 class HomePage extends StatefulWidget {
   final UserModel user;
@@ -51,7 +58,7 @@ class _HomePageState extends State<HomePage> {
     _PageInfo('Orders', Icons.receipt_long_rounded, const Color(0xFF3182CE)),
     _PageInfo('Menu Items', Icons.restaurant_menu_rounded, const Color(0xFFD69E2E)),
     _PageInfo('Kitchen', Icons.soup_kitchen_rounded, const Color(0xFFE53E3E)),
-    _PageInfo('Billing', Icons.point_of_sale_rounded, const Color(0xFF805AD5)),
+    _PageInfo('Sync Data', Icons.sync_rounded, const Color(0xFF805AD5)),
     _PageInfo('Reports', Icons.analytics_rounded, const Color(0xFF00B5D8)),
     _PageInfo('Settings', Icons.settings_rounded, const Color(0xFF718096)),
   ];
@@ -270,6 +277,23 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBody() {
+    switch (_selectedIndex) {
+      case 1:
+        return const TablesOverviewPage();
+      case 2:
+        return const OrdersOverviewPage();
+      case 3:
+        return const MenuItemsPage();
+      case 4:
+        return const KitchenOverviewPage();
+      case 5:
+        return const SyncDataPage();
+      default:
+        return _buildDashboardBody();
+    }
+  }
+
+  Widget _buildDashboardBody() {
     final currentPage = _pages[_selectedIndex];
 
     return BlocBuilder<DashboardBloc, DashboardState>(
@@ -277,9 +301,9 @@ class _HomePageState extends State<HomePage> {
       builder: (context, state) {
         return RefreshIndicator(
           onRefresh: () async {
-            _dashboardBloc.add(const RefreshDashboard());
-            // Wait for the state to change from the current one
-            await _dashboardBloc.stream.first;
+            final completer = Completer<void>();
+            _dashboardBloc.add(RefreshDashboard(completer: completer));
+            await completer.future;
           },
           color: primaryGradientStart,
           child: SingleChildScrollView(
@@ -665,8 +689,8 @@ class _HomePageState extends State<HomePage> {
         },
       ),
       _QuickAction(
-        title: 'Billing',
-        icon: Icons.point_of_sale_rounded,
+        title: 'Sync Data',
+        icon: Icons.sync_rounded,
         color: const Color(0xFF805AD5),
         onTap: () {
           setState(() => _selectedIndex = 5);

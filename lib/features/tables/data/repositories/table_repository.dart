@@ -32,7 +32,11 @@ class TableRepository {
               .toList();
         }
 
-        AppLogger.info('Fetched ${tables.length} tables from API');
+        final activeTables = tables.where((t) => t.isOngoing || t.isClosed).toList();
+        AppLogger.info('Fetched ${tables.length} tables from API (${activeTables.length} active - ongoing/closed)');
+        for (final t in tables) {
+          AppLogger.debug('Table: ${t.tableName} | Section: ${t.section} | Status: ${t.status}');
+        }
 
         // Cache the tables
         await TableStorageService.saveTables(tables);

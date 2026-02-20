@@ -31,7 +31,7 @@ class TableSelectionBloc extends Bloc<TableSelectionEvent, TableSelectionState> 
     emit(state.copyWith(status: TableSelectionStatus.loading));
 
     try {
-      final sections = await _repository.getTablesBySection();
+      final sections = await _repository.getTablesBySection(forceRefresh: event.forceRefresh);
       final favoriteIds = _repository.getFavoriteTableIds();
       final favoriteTables = _repository.getFavoriteTables();
 
@@ -96,8 +96,8 @@ class TableSelectionBloc extends Bloc<TableSelectionEvent, TableSelectionState> 
     SelectSection event,
     Emitter<TableSelectionState> emit,
   ) {
-    if (event.section == state.selectedSection) {
-      // Deselect if same section is tapped
+    if (event.section == null || event.section == state.selectedSection) {
+      // Select "All" or deselect if same section is tapped
       emit(state.copyWith(clearSelectedSection: true));
     } else {
       emit(state.copyWith(selectedSection: event.section));

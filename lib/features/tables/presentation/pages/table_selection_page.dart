@@ -21,7 +21,7 @@ class TableSelectionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => TableSelectionBloc()..add(const LoadTables()),
+      create: (_) => TableSelectionBloc()..add(LoadTables(forceRefresh: showOnlyActive)),
       child: TableSelectionView(showOnlyActive: showOnlyActive),
     );
   }
@@ -567,7 +567,7 @@ class TableSelectionView extends StatelessWidget {
 
     final activeTables = state.sections
         .expand((s) => s.tables)
-        .where((t) => t.isOngoing)
+        .where((t) => t.isOngoing || t.isClosed)
         .toList();
 
     if (activeTables.isEmpty) {

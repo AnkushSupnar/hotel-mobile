@@ -43,9 +43,10 @@ class ApiClient {
     String endpoint, {
     bool includeAuth = true,
   }) async {
-    AppLogger.apiRequest('GET', endpoint);
+    final fullUrl = ApiConfigService.getEndpoint(endpoint);
+    AppLogger.apiRequest('GET', endpoint, fullUrl: fullUrl);
     try {
-      final url = Uri.parse(ApiConfigService.getEndpoint(endpoint));
+      final url = Uri.parse(fullUrl);
       final response = await http
           .get(url, headers: _getHeaders(includeAuth: includeAuth))
           .timeout(Duration(seconds: ApiConfigService.timeout));
@@ -83,9 +84,10 @@ class ApiClient {
     Map<String, dynamic>? body,
     bool includeAuth = true,
   }) async {
-    AppLogger.apiRequest('POST', endpoint, body: body);
+    final fullUrl = ApiConfigService.getEndpoint(endpoint);
+    AppLogger.apiRequest('POST', endpoint, body: body, fullUrl: fullUrl);
     try {
-      final url = Uri.parse(ApiConfigService.getEndpoint(endpoint));
+      final url = Uri.parse(fullUrl);
       final response = await http
           .post(
             url,
@@ -127,9 +129,10 @@ class ApiClient {
     Map<String, dynamic>? body,
     bool includeAuth = true,
   }) async {
-    AppLogger.apiRequest('PUT', endpoint, body: body);
+    final fullUrl = ApiConfigService.getEndpoint(endpoint);
+    AppLogger.apiRequest('PUT', endpoint, body: body, fullUrl: fullUrl);
     try {
-      final url = Uri.parse(ApiConfigService.getEndpoint(endpoint));
+      final url = Uri.parse(fullUrl);
       final response = await http
           .put(
             url,
@@ -170,9 +173,10 @@ class ApiClient {
     String endpoint, {
     bool includeAuth = true,
   }) async {
-    AppLogger.apiRequest('DELETE', endpoint);
+    final fullUrl = ApiConfigService.getEndpoint(endpoint);
+    AppLogger.apiRequest('DELETE', endpoint, fullUrl: fullUrl);
     try {
-      final url = Uri.parse(ApiConfigService.getEndpoint(endpoint));
+      final url = Uri.parse(fullUrl);
       final response = await http
           .delete(url, headers: _getHeaders(includeAuth: includeAuth))
           .timeout(Duration(seconds: ApiConfigService.timeout));

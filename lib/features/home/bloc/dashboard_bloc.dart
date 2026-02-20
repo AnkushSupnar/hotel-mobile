@@ -20,7 +20,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) => add(const RefreshDashboard()),
+      (_) => add(RefreshDashboard()),
     );
   }
 
@@ -64,6 +64,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     } catch (e) {
       AppLogger.error('Failed to refresh dashboard', error: e);
       // Don't emit failure on refresh - keep showing old data
+    } finally {
+      event.completer?.complete();
     }
   }
 
