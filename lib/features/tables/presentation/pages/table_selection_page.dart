@@ -680,7 +680,11 @@ class TableSelectionView extends StatelessWidget {
             _navigateToExistingOrder(context, table, sectionColor);
           }
         },
-        onLongPress: isOngoing ? () => _showCloseTableDialog(context, table) : null,
+        onLongPress: isOngoing
+            ? () => _showCloseTableDialog(context, table)
+            : isClosed
+                ? () => _navigateToClosedTableOrder(context, table)
+                : null,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(

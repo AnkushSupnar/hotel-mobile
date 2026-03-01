@@ -6,6 +6,26 @@ class PaymentRepository {
 
   PaymentRepository({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
 
+  Future<Map<String, dynamic>?> printBill(int billNo) async {
+    AppLogger.info('Printing bill $billNo on server printer');
+    try {
+      final response = await _apiClient.post(
+        'billing/bills/$billNo/print',
+        includeAuth: true,
+      );
+
+      if (response.success && response.data != null) {
+        AppLogger.info('Bill $billNo printed successfully');
+        return response.data;
+      } else {
+        throw Exception(response.message ?? 'Failed to print bill');
+      }
+    } catch (e) {
+      AppLogger.error('Error printing bill $billNo', error: e);
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>?> submitPayment(
     int billNo, {
     required double cashReceived,

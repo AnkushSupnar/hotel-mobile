@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
+import 'package:hotel/core/utils/app_logger.dart';
 import 'package:hotel/core/constants/font_constants.dart';
 import 'package:hotel/core/services/bank_storage_service.dart';
 import 'package:hotel/core/services/bill_cache_service.dart';
@@ -41,6 +42,7 @@ class _BillPreviewPageState extends State<BillPreviewPage> {
   BankModel? _selectedBank;
   bool _isLoadingBanks = true;
   bool _isSubmitting = false;
+  bool _isPrinting = false;
 
   @override
   void initState() {
@@ -59,6 +61,94 @@ class _BillPreviewPageState extends State<BillPreviewPage> {
   }
 
   bool get _isCashPayment => _selectedBank?.ifsc == 'CASH';
+
+  Future<void> _showPrintConfirmation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.print_rounded, color: Color(0xFF667eea)),
+            SizedBox(width: 12),
+            Text('Print Bill'),
+          ],
+        ),
+        content: Text(
+          'Print Bill #${widget.billNo} for Table ${widget.tableName} on server printer?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF718096)),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: const Icon(Icons.print_rounded, size: 18),
+            label: const Text('Print'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF667eea),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _printOnServer();
+    }
+  }
+
+  Future<void> _printOnServer() async {
+    setState(() => _isPrinting = true);
+
+    try {
+      final result = await _paymentRepository.printBill(widget.billNo);
+      if (mounted) {
+        final printed = result?['printed'] == true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  printed ? Icons.check_circle : Icons.warning_rounded,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    printed
+                        ? 'Bill printed successfully'
+                        : 'Print request sent',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: printed ? _successColor : Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      AppLogger.error('Server print failed for bill ${widget.billNo}', error: e);
+      if (mounted) {
+        _showError('Print failed: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPrinting = false);
+      }
+    }
+  }
 
   Future<void> _submitPayment() async {
     if (_selectedBank == null) {
@@ -250,12 +340,7 @@ class _BillPreviewPageState extends State<BillPreviewPage> {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () {
-                Printing.layoutPdf(
-                  onLayout: (_) => Future.value(widget.pdfBytes),
-                  name: 'Bill_${widget.tableName}',
-                );
-              },
+              onTap: _isPrinting ? null : _showPrintConfirmation,
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 padding: const EdgeInsets.all(12),
@@ -263,11 +348,20 @@ class _BillPreviewPageState extends State<BillPreviewPage> {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
-                  Icons.print_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
+                child: _isPrinting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.print_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
               ),
             ),
           ),

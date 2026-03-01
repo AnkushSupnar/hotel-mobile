@@ -386,7 +386,7 @@ class _HomePageState extends State<HomePage> {
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 1.4,
+        childAspectRatio: 1.3,
       ),
       itemCount: stats.length,
       itemBuilder: (context, index) {
@@ -414,56 +414,64 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      stat.color.withValues(alpha: 0.2),
-                      stat.color.withValues(alpha: 0.1),
-                    ],
+          Flexible(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        stat.color.withValues(alpha: 0.2),
+                        stat.color.withValues(alpha: 0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  child: Icon(stat.icon, color: stat.color, size: 22),
                 ),
-                child: Icon(stat.icon, color: stat.color, size: 22),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: stat.isPositive
-                      ? const Color(0xFF38A169).withValues(alpha: 0.1)
-                      : const Color(0xFFE53E3E).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      stat.isPositive
-                          ? Icons.trending_up_rounded
-                          : Icons.trending_down_rounded,
-                      size: 14,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
                       color: stat.isPositive
-                          ? const Color(0xFF38A169)
-                          : const Color(0xFFE53E3E),
+                          ? const Color(0xFF38A169).withValues(alpha: 0.1)
+                          : const Color(0xFFE53E3E).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      stat.trend,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: stat.isPositive
-                            ? const Color(0xFF38A169)
-                            : const Color(0xFFE53E3E),
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          stat.isPositive
+                              ? Icons.trending_up_rounded
+                              : Icons.trending_down_rounded,
+                          size: 14,
+                          color: stat.isPositive
+                              ? const Color(0xFF38A169)
+                              : const Color(0xFFE53E3E),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            stat.trend,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: stat.isPositive
+                                  ? const Color(0xFF38A169)
+                                  : const Color(0xFFE53E3E),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,6 +486,7 @@ class _HomePageState extends State<HomePage> {
               ),
               Text(
                 stat.title,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
                   color: textMuted,
