@@ -11,6 +11,7 @@ class AuthStorageService {
   static const String _employeeNameKey = 'employee_name';
   static const String _roleKey = 'role';
   static const String _featuresKey = 'features';
+  static const String _enabledScreensKey = 'enabled_screens';
   static const String _tokenExpiresAtKey = 'token_expires_at';
   static const String _isLoggedInKey = 'is_logged_in';
 
@@ -91,6 +92,23 @@ class AuthStorageService {
     return features.contains(feature);
   }
 
+  // Enabled Screens
+  static List<String> get enabledScreens {
+    final screensJson = StorageService.getString(_enabledScreensKey);
+    if (screensJson != null) {
+      return List<String>.from(jsonDecode(screensJson) as List);
+    }
+    return [];
+  }
+
+  static Future<void> setEnabledScreens(List<String> screens) async {
+    await StorageService.setString(_enabledScreensKey, jsonEncode(screens));
+  }
+
+  static bool hasScreenAccess(String screenKey) {
+    return enabledScreens.contains(screenKey);
+  }
+
   // Token Expiration
   static int? get tokenExpiresAt {
     return StorageService.getInt(_tokenExpiresAtKey);
@@ -125,6 +143,7 @@ class AuthStorageService {
     String? employeeName,
     String? role,
     List<String>? features,
+    List<String>? enabledScreens,
     int? tokenExpiresAt,
   }) async {
     await setToken(token);
@@ -149,6 +168,9 @@ class AuthStorageService {
     if (features != null) {
       await setFeatures(features);
     }
+    if (enabledScreens != null) {
+      await setEnabledScreens(enabledScreens);
+    }
     if (tokenExpiresAt != null) {
       await setTokenExpiresAt(tokenExpiresAt);
     }
@@ -165,6 +187,7 @@ class AuthStorageService {
     await StorageService.remove(_employeeNameKey);
     await StorageService.remove(_roleKey);
     await StorageService.remove(_featuresKey);
+    await StorageService.remove(_enabledScreensKey);
     await StorageService.remove(_tokenExpiresAtKey);
     await StorageService.remove(_isLoggedInKey);
   }

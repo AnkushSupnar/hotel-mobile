@@ -99,17 +99,46 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
             features: features,
             tokenExpiresAt: user.tokenExpiresAt,
           );
-        }
 
-        emit(state.copyWith(
-          status: LoginStatus.success,
-          role: user.role,
-          employeeName: user.employeeName,
-          userId: user.userId,
-          employeeId: user.employeeId,
-          features: features,
-          user: user,
-        ));
+          // Fetch screen access for this user's role
+          List<String> enabledScreens = [];
+          try {
+            final screenResponse = await _apiClient.get('auth/screen-access');
+            if (screenResponse.success && screenResponse.data != null) {
+              final screenData = screenResponse.data!;
+              final rawScreens = screenData['data']?['enabledScreens']
+                  ?? screenData['enabledScreens'];
+              if (rawScreens != null) {
+                enabledScreens = List<String>.from(rawScreens as List);
+              }
+            }
+          } catch (_) {
+            // If screen access fetch fails, continue with empty list
+          }
+
+          await AuthStorageService.setEnabledScreens(enabledScreens);
+          final userWithScreens = user.copyWith(enabledScreens: enabledScreens);
+
+          emit(state.copyWith(
+            status: LoginStatus.success,
+            role: userWithScreens.role,
+            employeeName: userWithScreens.employeeName,
+            userId: userWithScreens.userId,
+            employeeId: userWithScreens.employeeId,
+            features: features,
+            user: userWithScreens,
+          ));
+        } else {
+          emit(state.copyWith(
+            status: LoginStatus.success,
+            role: user.role,
+            employeeName: user.employeeName,
+            userId: user.userId,
+            employeeId: user.employeeId,
+            features: features,
+            user: user,
+          ));
+        }
       } else {
         emit(state.copyWith(
           status: LoginStatus.failure,

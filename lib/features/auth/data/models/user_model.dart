@@ -6,6 +6,7 @@ class UserModel {
   final String role;
   final String avatarColor;
   final List<String> features;
+  final List<String> enabledScreens;
   final int? tokenExpiresInHours;
   final int? tokenExpiresAt;
 
@@ -17,12 +18,17 @@ class UserModel {
     required this.role,
     required this.avatarColor,
     this.features = const [],
+    this.enabledScreens = const [],
     this.tokenExpiresInHours,
     this.tokenExpiresAt,
   });
 
   bool hasFeature(String feature) {
     return features.contains(feature);
+  }
+
+  bool hasScreenAccess(String screenKey) {
+    return enabledScreens.contains(screenKey);
   }
 
   bool get isAdmin => role.toUpperCase() == 'ADMIN';
@@ -60,6 +66,11 @@ class UserModel {
       features = List<String>.from(data['features'] as List);
     }
 
+    List<String> enabledScreens = [];
+    if (data['enabledScreens'] != null) {
+      enabledScreens = List<String>.from(data['enabledScreens'] as List);
+    }
+
     return UserModel(
       userId: data['userId'] as int?,
       employeeId: data['employeeId'] as int?,
@@ -68,6 +79,7 @@ class UserModel {
       role: role,
       avatarColor: _getAvatarColor(role),
       features: features,
+      enabledScreens: enabledScreens,
       tokenExpiresInHours: data['tokenExpiresInHours'] as int?,
       tokenExpiresAt: data['tokenExpiresAt'] as int?,
     );
@@ -83,6 +95,32 @@ class UserModel {
     );
   }
 
+  UserModel copyWith({
+    int? userId,
+    int? employeeId,
+    String? username,
+    String? employeeName,
+    String? role,
+    String? avatarColor,
+    List<String>? features,
+    List<String>? enabledScreens,
+    int? tokenExpiresInHours,
+    int? tokenExpiresAt,
+  }) {
+    return UserModel(
+      userId: userId ?? this.userId,
+      employeeId: employeeId ?? this.employeeId,
+      username: username ?? this.username,
+      employeeName: employeeName ?? this.employeeName,
+      role: role ?? this.role,
+      avatarColor: avatarColor ?? this.avatarColor,
+      features: features ?? this.features,
+      enabledScreens: enabledScreens ?? this.enabledScreens,
+      tokenExpiresInHours: tokenExpiresInHours ?? this.tokenExpiresInHours,
+      tokenExpiresAt: tokenExpiresAt ?? this.tokenExpiresAt,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'userId': userId,
@@ -91,6 +129,7 @@ class UserModel {
       'employeeName': employeeName,
       'role': role,
       'features': features,
+      'enabledScreens': enabledScreens,
       'tokenExpiresInHours': tokenExpiresInHours,
       'tokenExpiresAt': tokenExpiresAt,
     };

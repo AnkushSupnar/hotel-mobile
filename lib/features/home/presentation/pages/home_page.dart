@@ -31,12 +31,38 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final DashboardBloc _dashboardBloc;
 
+  bool _isScreenEnabled(String screenKey) {
+    final enabled = widget.user.enabledScreens;
+    if (enabled.isEmpty) return true;
+    return enabled.contains(screenKey);
+  }
+
   @override
   void initState() {
     super.initState();
     _dashboardBloc = DashboardBloc();
     _dashboardBloc.add(const LoadDashboard());
     _dashboardBloc.startAutoRefresh();
+
+    // If dashboard is not enabled, default to first available screen
+    if (widget.user.enabledScreens.isNotEmpty &&
+        !widget.user.enabledScreens.contains('dashboard')) {
+      const screenKeyToIndex = {
+        'dashboard': 0,
+        'tables_overview': 1,
+        'orders_overview': 2,
+        'menu_items': 3,
+        'kitchen_overview': 4,
+        'sync_data': 5,
+        'reports': 6,
+      };
+      for (final key in screenKeyToIndex.keys) {
+        if (widget.user.enabledScreens.contains(key)) {
+          _selectedIndex = screenKeyToIndex[key]!;
+          break;
+        }
+      }
+    }
   }
 
   @override
@@ -77,6 +103,7 @@ class _HomePageState extends State<HomePage> {
           });
         },
         onLogout: _handleLogout,
+        enabledScreens: widget.user.enabledScreens,
       ),
       body: Column(
         children: [
@@ -668,14 +695,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildQuickActions(_PageInfo currentPage) {
-    final actions = [
-      _QuickAction(
+    final allActions = <_QuickAction>[];
+
+    if (_isScreenEnabled('table_selection') || _isScreenEnabled('order_page')) {
+      allActions.add(_QuickAction(
         title: 'New Order',
         icon: Icons.add_circle_outline_rounded,
         color: const Color(0xFF3182CE),
         onTap: _navigateToNewOrder,
-      ),
-      _QuickAction(
+      ));
+    }
+
+    if (_isScreenEnabled('table_selection')) {
+      allActions.add(_QuickAction(
         title: 'Tables',
         icon: Icons.table_bar_rounded,
         color: const Color(0xFF38A169),
@@ -686,8 +718,11 @@ class _HomePageState extends State<HomePage> {
             ),
           );
         },
-      ),
-      _QuickAction(
+      ));
+    }
+
+    if (_isScreenEnabled('kitchen_page')) {
+      allActions.add(_QuickAction(
         title: 'Kitchen',
         icon: Icons.soup_kitchen_rounded,
         color: const Color(0xFFE53E3E),
@@ -696,16 +731,23 @@ class _HomePageState extends State<HomePage> {
             MaterialPageRoute(builder: (_) => const KitchenPage()),
           );
         },
-      ),
-      _QuickAction(
+      ));
+    }
+
+    if (_isScreenEnabled('sync_data')) {
+      allActions.add(_QuickAction(
         title: 'Sync Data',
         icon: Icons.sync_rounded,
         color: const Color(0xFF805AD5),
         onTap: () {
           setState(() => _selectedIndex = 5);
         },
-      ),
-    ];
+      ));
+    }
+
+    final actions = allActions;
+
+    if (actions.isEmpty) return const SizedBox.shrink();
 
     return Row(
       children: actions.map((action) {

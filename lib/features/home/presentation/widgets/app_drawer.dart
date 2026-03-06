@@ -8,6 +8,7 @@ class AppDrawer extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemSelected;
   final VoidCallback onLogout;
+  final List<String> enabledScreens;
 
   const AppDrawer({
     super.key,
@@ -15,6 +16,7 @@ class AppDrawer extends StatefulWidget {
     required this.selectedIndex,
     required this.onItemSelected,
     required this.onLogout,
+    this.enabledScreens = const [],
   });
 
   @override
@@ -190,52 +192,69 @@ class _AppDrawerState extends State<AppDrawer> {
   }
 
   Widget _buildMenuItems(BuildContext context) {
-    final menuItems = [
+    final allMenuItems = [
       _MenuItem(
         icon: Icons.dashboard_rounded,
         title: 'Dashboard',
         color: const Color(0xFF667eea),
+        screenKey: 'dashboard',
+        originalIndex: 0,
       ),
       _MenuItem(
         icon: Icons.table_bar_rounded,
         title: 'Tables',
         color: const Color(0xFF38A169),
+        screenKey: 'tables_overview',
+        originalIndex: 1,
       ),
       _MenuItem(
         icon: Icons.receipt_long_rounded,
         title: 'Orders',
         color: const Color(0xFF3182CE),
+        screenKey: 'orders_overview',
+        originalIndex: 2,
       ),
       _MenuItem(
         icon: Icons.restaurant_menu_rounded,
         title: 'Menu Items',
         color: const Color(0xFFD69E2E),
+        screenKey: 'menu_items',
+        originalIndex: 3,
       ),
       _MenuItem(
         icon: Icons.soup_kitchen_rounded,
         title: 'Kitchen',
         color: const Color(0xFFE53E3E),
+        screenKey: 'kitchen_overview',
+        originalIndex: 4,
       ),
       _MenuItem(
         icon: Icons.sync_rounded,
         title: 'Sync Data',
         color: const Color(0xFF805AD5),
+        screenKey: 'sync_data',
+        originalIndex: 5,
       ),
       _MenuItem(
         icon: Icons.analytics_rounded,
         title: 'Reports',
         color: const Color(0xFF00B5D8),
+        screenKey: 'reports',
+        originalIndex: 6,
       ),
     ];
+
+    final enabled = widget.enabledScreens;
+    final menuItems = enabled.isEmpty
+        ? allMenuItems
+        : allMenuItems.where((item) => enabled.contains(item.screenKey)).toList();
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       children: [
         // Regular menu items (not Settings)
-        ...menuItems.asMap().entries.map((entry) {
-          final index = entry.key;
-          final item = entry.value;
-          final isSelected = widget.selectedIndex == index;
+        ...menuItems.map((item) {
+          final isSelected = widget.selectedIndex == item.originalIndex;
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -243,7 +262,7 @@ class _AppDrawerState extends State<AppDrawer> {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
-                  widget.onItemSelected(index);
+                  widget.onItemSelected(item.originalIndex);
                   Navigator.of(context).pop();
                 },
                 borderRadius: BorderRadius.circular(16),
@@ -323,9 +342,21 @@ class _AppDrawerState extends State<AppDrawer> {
         }),
 
         // Settings with expandable submenu
-        _buildSettingsMenu(context),
+        if (_shouldShowSettings()) _buildSettingsMenu(context),
       ],
     );
+  }
+
+  bool _shouldShowSettings() {
+    final enabled = widget.enabledScreens;
+    if (enabled.isEmpty) return true; // no restrictions
+    return enabled.contains('favorite_tables') || enabled.contains('favorite_items');
+  }
+
+  bool _isScreenEnabled(String screenKey) {
+    final enabled = widget.enabledScreens;
+    if (enabled.isEmpty) return true; // no restrictions
+    return enabled.contains(screenKey);
   }
 
   Widget _buildSettingsMenu(BuildContext context) {
@@ -431,35 +462,38 @@ class _AppDrawerState extends State<AppDrawer> {
             padding: const EdgeInsets.only(left: 24),
             child: Column(
               children: [
-                _buildSubMenuItem(
-                  context,
-                  icon: Icons.star_rounded,
-                  title: 'Favorite Tables',
-                  color: const Color(0xFFED8936),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const FavoriteTablesPage(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 4),
-                _buildSubMenuItem(
-                  context,
-                  icon: Icons.restaurant_menu_rounded,
-                  title: 'Favorite Items',
-                  color: const Color(0xFF805AD5),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const FavoriteItemsPage(),
-                      ),
-                    );
-                  },
-                ),
+                if (_isScreenEnabled('favorite_tables'))
+                  _buildSubMenuItem(
+                    context,
+                    icon: Icons.star_rounded,
+                    title: 'Favorite Tables',
+                    color: const Color(0xFFED8936),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const FavoriteTablesPage(),
+                        ),
+                      );
+                    },
+                  ),
+                if (_isScreenEnabled('favorite_tables') && _isScreenEnabled('favorite_items'))
+                  const SizedBox(height: 4),
+                if (_isScreenEnabled('favorite_items'))
+                  _buildSubMenuItem(
+                    context,
+                    icon: Icons.restaurant_menu_rounded,
+                    title: 'Favorite Items',
+                    color: const Color(0xFF805AD5),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const FavoriteItemsPage(),
+                        ),
+                      );
+                    },
+                  ),
               ],
             ),
           ),
@@ -603,10 +637,14 @@ class _MenuItem {
   final IconData icon;
   final String title;
   final Color color;
+  final String screenKey;
+  final int originalIndex;
 
   _MenuItem({
     required this.icon,
     required this.title,
     required this.color,
+    required this.screenKey,
+    this.originalIndex = 0,
   });
 }
